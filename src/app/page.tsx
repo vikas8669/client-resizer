@@ -12,6 +12,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import Logo from "@/components/Logo";
 import { Menu } from "lucide-react";
 import { useState } from "react";
+import { Footer } from "@/components/Footer";
 
 export default function Home() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -136,14 +137,7 @@ export default function Home() {
       </main>
 
       {/* FOOTER */}
-      <footer className="py-16 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-white/10 text-center text-zinc-500 text-sm">
-        <div className="flex justify-center mb-4">
-          <Logo />
-        </div>
-        <p>
-          &copy; {new Date().getFullYear()} PrintPix. All rights reserved.
-        </p>
-      </footer>
+     <Footer />
     </div>
   );
 }
