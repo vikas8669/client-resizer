@@ -87,11 +87,11 @@ export default function Home() {
         {/* Mobile: short text | Desktop: full text */}
         <p className="text-white text-xs sm:text-sm md:text-base font-medium text-center leading-snug px-8">
           <span className="md:hidden">
-            👋 <span className="font-bold">PixelFlow AI</span> —{" "}
+            👋 <span className="font-bold">PrintPix</span> —{" "}
             <a href="#features" className="underline hover:opacity-80 transition">Explore features</a>
           </span>
           <span className="hidden md:inline">
-            👋 Welcome to <span className="font-bold">PixelFlow AI</span> — AI-powered image processing & design workspace.{" "}
+            👋 Welcome to <span className="font-bold">PrintPix</span> — AI-powered image processing & design workspace.{" "}
             <a href="#features" className="underline ml-2 hover:opacity-80 transition">Explore features</a>
           </span>
         </p>
