@@ -6,6 +6,8 @@ export interface EditorSettings {
   quality: number;
   format: 'jpeg' | 'png';
   preset: string | null;
+  focalX: number;
+  focalY: number;
 }
 
 export interface CropState {
@@ -38,6 +40,8 @@ const defaultSettings: EditorSettings = {
   quality: 80,
   format: 'jpeg',
   preset: null,
+  focalX: 0,
+  focalY: 0,
 };
 
 export const useEditorStore = create<EditorState>((set) => ({
@@ -49,7 +53,6 @@ export const useEditorStore = create<EditorState>((set) => ({
   isProcessing: false,
 
   setOriginalFile: (file) => {
-    // Revoke old URL to avoid memory leaks
     set((state) => {
       if (state.originalImageUrl && state.originalImageUrl.startsWith('blob:')) {
         URL.revokeObjectURL(state.originalImageUrl);

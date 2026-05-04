@@ -4,10 +4,26 @@ import React, { useCallback, useState } from 'react';
 import { UploadCloud } from 'lucide-react';
 import { useEditorStore } from '@/store/useEditorStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 export function Dropzone() {
   const setOriginalFile = useEditorStore((state) => state.setOriginalFile);
   const [isDragging, setIsDragging] = useState(false);
+  const MAX_FILE_SIZE = 20 * 1024 * 1024;
+
+  const validateAndSetFile = useCallback((file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload a valid image file.');
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('Image is too large. Max size is 20MB.');
+      return;
+    }
+
+    setOriginalFile(file);
+  }, [setOriginalFile]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -28,20 +44,16 @@ export function Dropzone() {
     
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
-      if (file.type.startsWith('image/')) {
-        setOriginalFile(file);
-      }
+      validateAndSetFile(file);
     }
-  }, [setOriginalFile]);
+  }, [validateAndSetFile]);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      if (file.type.startsWith('image/')) {
-        setOriginalFile(file);
-      }
+      validateAndSetFile(file);
     }
-  }, [setOriginalFile]);
+  }, [validateAndSetFile]);
 
   return (
     <motion.div 
@@ -76,6 +88,9 @@ export function Dropzone() {
       <p className="relative z-10 text-sm sm:text-base text-zinc-500 dark:text-zinc-400 text-center max-w-sm px-4 pointer-events-none">
         {isDragging ? 'Release to upload' : 'Tap to upload, or drag files here'}
       </p>
+      <p className="relative z-10 mt-2 text-xs text-zinc-400 dark:text-zinc-500 text-center px-4 pointer-events-none">
+        Supports JPG, PNG, WebP up to 20MB
+      </p>
       
       <input 
         id="file-upload" 
@@ -87,3 +102,4 @@ export function Dropzone() {
     </motion.div>
   );
 }
+

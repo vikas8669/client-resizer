@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import Logo from "@/components/Logo";
-import { Github, Instagram, Linkedin, Facebook } from "lucide-react";
+import { Github, Instagram, Linkedin, Facebook, ExternalLink } from "lucide-react";
 
 export function Footer() {
   const socialLinks = [
@@ -28,8 +28,13 @@ export function Footer() {
             </p>
 
             {/* OWNER */}
-            <div className="flex items-center gap-4 p-3 rounded-2xl  dark:bg-zinc-90  dark:border-white/5 w-fit hover:shadow-md transition">
-              <div className="relative w-12 h-12 rounded-full overflow-hidden border b dark:bg-zinc-800">
+            <a 
+              href="https://vk-port-six.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center gap-4 p-3 -ml-3 rounded-2xl border border-transparent hover:bg-zinc-50 dark:hover:bg-zinc-900/50 hover:border-zinc-200 dark:hover:border-white/10 w-fit hover:shadow-sm transition cursor-pointer"
+            >
+              <div className="relative w-12 h-12 rounded-full overflow-hidden border border-zinc-200 dark:border-zinc-800">
                 <Image 
                   src="/vikas2.png" 
                   alt="Vikas"
@@ -38,14 +43,15 @@ export function Footer() {
                 />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                <h4 className="flex items-center gap-1.5 text-sm font-semibold text-zinc-900 dark:text-white group-hover:text-primary transition-colors">
                   Mr. Vikas Kumar
+                  <ExternalLink className="w-3.5 h-3.5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
                 </h4>
-                <p className="text-xs text-zinc-500">
-                  {/* Founder  */}
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Portfolio &rarr;
                 </p>
               </div>
-            </div>
+            </a>
           </div>
 
           {/* RIGHT - LINKS */}

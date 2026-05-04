@@ -59,7 +59,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     setIsSubmitting(true);
     try {
       await submitFeedback.mutateAsync({
-        name: data.name,
+        name: data.name?.trim() || 'Anonymous',
         comment: data.comment,
         rating,
         tags: selectedTags

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
 import { Dropzone } from './Dropzone';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import apiClient from '@/api/api';
 import { ENDPOINTS, SERVER_BASE_URL } from '@/api/endpoints';
-import { Download, RefreshCw, LayoutTemplate } from 'lucide-react';
+import { Download, RefreshCw, LayoutTemplate, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const PRESETS = [
@@ -23,11 +23,14 @@ const PRESETS = [
 ];
 
 const PRINT_LAYOUTS = [
-  { name: '8 Photos', count: 8 },
-  { name: '16 Photos', count: 16 },
-  { name: '32 Photos', count: 32 },
-  { name: '52 Photos', count: 52 },
+  { name: '8 Copies', count: 8 },
+  { name: '16 Copies', count: 16 },
+  { name: '32 Copies', count: 32 },
+  { name: '52 Copies', count: 52 },
 ];
+const MIN_DIMENSION = 100;
+const MAX_DIMENSION = 3000;
+const DIMENSION_STEP = 10;
 
 export function EditorWorkspace() {
   const { 
@@ -43,10 +46,43 @@ export function EditorWorkspace() {
   } = useEditorStore();
 
   const [printLayoutUrl, setPrintLayoutUrl] = useState<string | null>(null);
+  const [activeTask, setActiveTask] = useState<'process' | 'remove-bg' | 'print' | null>(null);
+  const NUDGE_STEP = 0.2;
+
+  useEffect(() => {
+    const saved = window.sessionStorage.getItem('printLayoutUrl');
+    if (saved) {
+      setPrintLayoutUrl(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (printLayoutUrl) {
+      window.sessionStorage.setItem('printLayoutUrl', printLayoutUrl);
+    } else {
+      window.sessionStorage.removeItem('printLayoutUrl');
+    }
+  }, [printLayoutUrl]);
+
+  const extractServerPath = (fullUrl: string) => {
+    const normalizedBase = SERVER_BASE_URL.endsWith('/') ? SERVER_BASE_URL : `${SERVER_BASE_URL}/`;
+    if (!fullUrl.startsWith(normalizedBase)) {
+      return null;
+    }
+    return fullUrl.slice(normalizedBase.length);
+  };
+
+  const nudgeFocus = (dx: number, dy: number) => {
+    updateSettings({
+      focalX: Math.max(-1, Math.min(1, settings.focalX + dx)),
+      focalY: Math.max(-1, Math.min(1, settings.focalY + dy)),
+    });
+  };
 
   const handleProcess = async () => {
     if (!originalFile) return;
     
+    setActiveTask('process');
     setIsProcessing(true);
     try {
       const formData = new FormData();
@@ -56,17 +92,24 @@ export function EditorWorkspace() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      const filename = uploadRes.data.filename;
+      const imageId = uploadRes.data?.data?._id;
+      if (!imageId) {
+        throw new Error('Upload failed: missing image id');
+      }
       
       const processRes = await apiClient.post(ENDPOINTS.PROCESS, {
-        filename,
+        imageId,
         width: settings.width,
         height: settings.height,
-        quality: settings.quality,
-        format: settings.format
+        focalX: settings.focalX,
+        focalY: settings.focalY,
       });
       
-      const fullUrl = `${SERVER_BASE_URL}${processRes.data.imageUrl}`;
+      const outputPath = processRes.data?.data?.output;
+      const fullUrl = outputPath ? `${SERVER_BASE_URL}/${outputPath}` : null;
+      if (!fullUrl) {
+        throw new Error('Processing failed: missing output path');
+      }
       setProcessedImageUrl(fullUrl);
       toast.success('Image processed successfully!');
       
@@ -75,33 +118,120 @@ export function EditorWorkspace() {
       toast.error('Failed to process image');
     } finally {
       setIsProcessing(false);
+      setActiveTask(null);
     }
   };
 
   const handlePrintLayout = async (layoutCount: number) => {
     if (!originalFile) return;
     
+    setActiveTask('print');
     setIsProcessing(true);
     try {
-      const formData = new FormData();
-      formData.append('image', originalFile);
-      const uploadRes = await apiClient.post(ENDPOINTS.UPLOAD, formData);
-      const filename = uploadRes.data.filename;
+      let imagePath = processedImageUrl ? extractServerPath(processedImageUrl) : null;
+
+      if (!imagePath) {
+        const formData = new FormData();
+        formData.append('image', originalFile);
+        const uploadRes = await apiClient.post(ENDPOINTS.UPLOAD, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        imagePath = uploadRes.data?.data?.originalPath;
+      }
+
+      if (!imagePath) {
+        throw new Error('Image path is missing for print generation');
+      }
 
       const printRes = await apiClient.post(ENDPOINTS.PRINT_LAYOUT, {
-        filename,
-        layoutCount
+        images: [imagePath],
+        type: layoutCount
       });
 
-      const fullUrl = `${SERVER_BASE_URL}${printRes.data.imageUrl}`;
+      const pdfPath = printRes.data?.pdf;
+      const fullUrl = pdfPath ? `${SERVER_BASE_URL}/${pdfPath}` : null;
+      if (!fullUrl) {
+        throw new Error('Print generation failed: missing pdf path');
+      }
       setPrintLayoutUrl(fullUrl);
-      toast.success(`A4 layout for ${layoutCount} photos generated!`);
+      toast.success(`A4 layout for ${layoutCount} passport-size copies generated!`);
 
     } catch (error) {
       console.error('Print layout failed', error);
       toast.error('Failed to generate print layout');
     } finally {
       setIsProcessing(false);
+      setActiveTask(null);
+    }
+  };
+
+  const handleRemoveBackground = async () => {
+    if (!originalFile) return;
+
+    setActiveTask('remove-bg');
+    setIsProcessing(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', originalFile);
+
+      const uploadRes = await apiClient.post(ENDPOINTS.UPLOAD, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const imageId = uploadRes.data?.data?._id;
+      if (!imageId) {
+        throw new Error('Upload failed: missing image id');
+      }
+
+      const removeBgRes = await apiClient.post(ENDPOINTS.REMOVE_BG, { imageId });
+      const outputPath = removeBgRes.data?.data?.output;
+      const fullUrl = outputPath ? `${SERVER_BASE_URL}/${outputPath}` : null;
+
+      if (!fullUrl) {
+        throw new Error('Remove background failed: missing output path');
+      }
+
+      setProcessedImageUrl(fullUrl);
+      toast.success('Background removed. You can print this image now.');
+    } catch (error) {
+      console.error('Remove background failed', error);
+      toast.error('Failed to remove background');
+    } finally {
+      setIsProcessing(false);
+      setActiveTask(null);
+    }
+  };
+
+  const handleStartOver = () => {
+    setPrintLayoutUrl(null);
+    window.sessionStorage.removeItem('printLayoutUrl');
+    reset();
+  };
+
+  const handleSingleDownload = async () => {
+    if (!processedImageUrl) return;
+
+    try {
+      const response = await fetch(processedImageUrl);
+      if (!response.ok) {
+        throw new Error('Failed to fetch processed image');
+      }
+
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const ext = settings.format === 'png' ? 'png' : 'jpg';
+      const filename = `processed-image-${Date.now()}.${ext}`;
+
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      console.error('Single image download failed', error);
+      toast.error('Failed to download image');
     }
   };
 
@@ -194,6 +324,11 @@ export function EditorWorkspace() {
               <div className="flex flex-col items-center gap-4">
                 <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
                 <p className="text-sm font-semibold text-zinc-900 dark:text-white animate-pulse">Processing Image...</p>
+                <p className="text-xs text-zinc-600 dark:text-zinc-300">
+                  {activeTask === 'remove-bg' && 'Removing background...'}
+                  {activeTask === 'print' && 'Generating print-ready PDF...'}
+                  {activeTask === 'process' && 'Applying resize and quality settings...'}
+                </p>
               </div>
             </div>
           )}
@@ -209,10 +344,27 @@ export function EditorWorkspace() {
               <LayoutTemplate className="w-6 h-6" />
             </div>
             <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-6">A4 Print Layout Ready</h3>
-            <img src={printLayoutUrl} alt="Print Layout" className="max-h-[400px] mx-auto mb-8 border border-zinc-200 shadow-lg rounded-md" />
-            <a href={printLayoutUrl} download className={buttonVariants({ size: "lg", className: "px-8 py-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-xl transition-all" })}>
-              <Download className="w-5 h-5 mr-2" /> Download High-Res A4
-            </a>
+            <iframe title="Print Layout PDF" src={printLayoutUrl} className="w-full h-[420px] mx-auto mb-8 border border-zinc-200 shadow-lg rounded-md bg-white" />
+            <button
+              type="button"
+              onClick={() => setPrintLayoutUrl(null)}
+              className="text-xs text-zinc-500 hover:text-zinc-700 mb-4 underline underline-offset-4"
+            >
+              Clear this preview
+            </button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <a
+                href={printLayoutUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonVariants({ variant: "outline", className: "px-8 py-6 rounded-xl font-semibold" })}
+              >
+                Open Fullscreen PDF
+              </a>
+              <a href={printLayoutUrl} download target="_blank" rel="noopener noreferrer" className={buttonVariants({ size: "lg", className: "px-8 py-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-xl transition-all" })}>
+                <Download className="w-5 h-5 mr-2" /> Download High-Res A4
+              </a>
+            </div>
           </motion.div>
         )}
       </div>
@@ -238,8 +390,12 @@ export function EditorWorkspace() {
                   <Button 
                     key={preset.name} 
                     variant="outline" 
-                    className="w-full text-xs h-auto py-4 flex flex-col items-center gap-1 border-zinc-200 dark:border-white/10 hover:border-primary hover:bg-primary/5 transition-colors rounded-xl"
-                    onClick={() => updateSettings({ width: preset.width, height: preset.height })}
+                    className={`w-full text-xs h-auto py-4 flex flex-col items-center gap-1 transition-colors rounded-xl ${
+                      settings.preset === preset.name
+                        ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                        : 'border-zinc-200 dark:border-white/10 hover:border-primary hover:bg-primary/5'
+                    }`}
+                    onClick={() => updateSettings({ width: preset.width, height: preset.height, preset: preset.name, focalX: 0, focalY: 0 })}
                   >
                     <span className="font-semibold text-zinc-900 dark:text-white">{preset.name}</span>
                     <span className="text-zinc-500">{preset.width}x{preset.height}</span>
@@ -255,8 +411,16 @@ export function EditorWorkspace() {
                   type="number" 
                   placeholder="Auto" 
                   value={settings.width || ''}
-                  onChange={(e) => updateSettings({ width: e.target.value ? Number(e.target.value) : null })}
+                  onChange={(e) => updateSettings({ width: e.target.value ? Number(e.target.value) : null, preset: null, focalX: 0, focalY: 0 })}
                   className="rounded-xl border-zinc-200 dark:border-white/10 focus-visible:ring-primary h-11"
+                />
+                <Slider
+                  value={[settings.width || 1080]}
+                  min={MIN_DIMENSION}
+                  max={MAX_DIMENSION}
+                  step={DIMENSION_STEP}
+                  onValueChange={(val) => updateSettings({ width: (val as number[])[0], preset: null })}
+                  className="py-2"
                 />
               </div>
               <div className="space-y-3">
@@ -265,11 +429,79 @@ export function EditorWorkspace() {
                   type="number" 
                   placeholder="Auto" 
                   value={settings.height || ''}
-                  onChange={(e) => updateSettings({ height: e.target.value ? Number(e.target.value) : null })}
+                  onChange={(e) => updateSettings({ height: e.target.value ? Number(e.target.value) : null, preset: null, focalX: 0, focalY: 0 })}
                   className="rounded-xl border-zinc-200 dark:border-white/10 focus-visible:ring-primary h-11"
+                />
+                <Slider
+                  value={[settings.height || 1080]}
+                  min={MIN_DIMENSION}
+                  max={MAX_DIMENSION}
+                  step={DIMENSION_STEP}
+                  onValueChange={(val) => updateSettings({ height: (val as number[])[0], preset: null })}
+                  className="py-2"
                 />
               </div>
               <p className="text-xs text-zinc-500 font-medium">Leave an input empty to maintain original aspect ratio.</p>
+
+              {settings.width && settings.height && (
+                <div className="pt-2">
+                  <Label className="text-zinc-700 dark:text-zinc-300 font-medium block mb-3">
+                    Framing Position
+                  </Label>
+                  <div className="grid grid-cols-3 gap-2 max-w-[180px]">
+                    <div />
+                    <Button type="button" variant="outline" className="h-10" onClick={() => nudgeFocus(0, -NUDGE_STEP)}>
+                      <ArrowUp className="w-4 h-4" />
+                    </Button>
+                    <div />
+                    <Button type="button" variant="outline" className="h-10" onClick={() => nudgeFocus(-NUDGE_STEP, 0)}>
+                      <ArrowLeft className="w-4 h-4" />
+                    </Button>
+                    <Button type="button" variant="outline" className="h-10 text-xs" onClick={() => updateSettings({ focalX: 0, focalY: 0 })}>
+                      Center
+                    </Button>
+                    <Button type="button" variant="outline" className="h-10" onClick={() => nudgeFocus(NUDGE_STEP, 0)}>
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                    <div />
+                    <Button type="button" variant="outline" className="h-10" onClick={() => nudgeFocus(0, NUDGE_STEP)}>
+                      <ArrowDown className="w-4 h-4" />
+                    </Button>
+                    <div />
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-3">
+                    Move to choose which part of the image is kept in fixed-ratio output.
+                  </p>
+                  <div className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs text-zinc-500">
+                        <span>Left</span>
+                        <span>Right</span>
+                      </div>
+                      <Slider
+                        value={[settings.focalX]}
+                        min={-1}
+                        max={1}
+                        step={0.05}
+                        onValueChange={(val) => updateSettings({ focalX: (val as number[])[0] })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs text-zinc-500">
+                        <span>Up</span>
+                        <span>Down</span>
+                      </div>
+                      <Slider
+                        value={[settings.focalY]}
+                        min={-1}
+                        max={1}
+                        step={0.05}
+                        onValueChange={(val) => updateSettings({ focalY: (val as number[])[0] })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </TabsContent>
             
             <TabsContent value="compress" className="space-y-8 mt-6">
@@ -318,16 +550,30 @@ export function EditorWorkspace() {
             >
               {isProcessing ? 'Processing...' : 'Apply Changes & Preview'}
             </Button>
+
+            <Button
+              variant="outline"
+              className="w-full h-12 rounded-xl font-semibold border-zinc-200 hover:bg-zinc-50 text-zinc-900 transition-colors"
+              onClick={handleRemoveBackground}
+              disabled={isProcessing}
+            >
+              Remove Background
+            </Button>
             
             {processedImageUrl && (
-              <a href={processedImageUrl} download className={buttonVariants({ variant: "outline", className: "w-full h-12 rounded-xl font-semibold border-zinc-200 hover:bg-zinc-50 text-zinc-900 transition-colors" })}>
+              <button
+                type="button"
+                onClick={handleSingleDownload}
+                className={buttonVariants({ variant: "outline", className: "w-full h-12 rounded-xl font-semibold border-zinc-200 hover:bg-zinc-50 text-zinc-900 transition-colors" })}
+              >
                 <Download className="w-4 h-4 mr-2" /> Download Single Image
-              </a>
+              </button>
             )}
           </div>
 
           <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-white/10">
-            <Label className="font-semibold text-zinc-900 dark:text-white block mb-4">Generate Print Layout (A4)</Label>
+            <Label className="font-semibold text-zinc-900 dark:text-white block mb-2">Generate Print Layout (A4)</Label>
+            <p className="text-xs text-zinc-500 mb-4">Real passport size: 35mm x 45mm</p>
             <div className="grid grid-cols-2 gap-3">
               {PRINT_LAYOUTS.map((layout) => (
                 <Button 
@@ -345,7 +591,7 @@ export function EditorWorkspace() {
         </div>
 
         <div className="mt-auto p-6 bg-zinc-50/50 dark:bg-white/5 border-t border-zinc-100 dark:border-white/5">
-          <Button variant="ghost" className="w-full text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50 rounded-xl" onClick={reset}>
+          <Button variant="ghost" className="w-full text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50 rounded-xl" onClick={handleStartOver}>
             <RefreshCw className="w-4 h-4 mr-2" /> Start Over with New Image
           </Button>
         </div>

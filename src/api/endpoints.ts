@@ -1,25 +1,15 @@
-/**
- * API Configuration
- * 
- * Set NEXT_PUBLIC_SERVER_URL environment variable to override the default backend URL
- * 
- * Examples:
- * - Development: http://localhost:5000
- * - Production: https://api.example.com
- * 
- * In .env.local:
- * NEXT_PUBLIC_SERVER_URL=http://localhost:5000
- */
+
 
 export const SERVER_BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000';
-export const API_BASE_URL = `${SERVER_BASE_URL}/api`;
+export const API_BASE_URL = SERVER_BASE_URL;
 
 export const ENDPOINTS = {
-  UPLOAD: '/upload',
-  PROCESS: '/process',
-  PRINT_LAYOUT: '/print-layout',
+  UPLOAD: '/api/images/upload',
+  PROCESS: '/api/images/process',
+  REMOVE_BG: '/api/images/remove-bg',
+  PRINT_LAYOUT: '/api/print/generate',
   FEEDBACK: '/feedback',
-  ANALYTICS: '/analytics',
+  ANALYTICS: '/feedback/average',
 };
 
 // Log API configuration in development

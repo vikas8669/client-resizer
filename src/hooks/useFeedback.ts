@@ -20,7 +20,7 @@ export function useFeedback() {
     queryFn: async () => {
       try {
         const res = await apiClient.get(ENDPOINTS.FEEDBACK);
-        return res.data;
+        return res.data?.data || [];
       } catch (error: any) {
         const errorMsg = error.message || 'Failed to fetch feedback';
         console.warn('Feedback service unavailable:', errorMsg);
@@ -36,7 +36,7 @@ export function useFeedback() {
     mutationFn: async (newFeedback: Partial<Feedback>) => {
       try {
         const res = await apiClient.post(ENDPOINTS.FEEDBACK, newFeedback);
-        return res.data;
+        return res.data?.data;
       } catch (error: any) {
         const errorMsg = error.message || 'Failed to submit feedback';
         toast.error(errorMsg);
