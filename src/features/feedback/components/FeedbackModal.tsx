@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm } from 'react-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -14,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useForm as useReactHookForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFeedback } from '@/hooks/useFeedback';
@@ -39,7 +38,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { register, handleSubmit, formState: { errors }, reset } = useReactHookForm<FeedbackFormValues>({
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<FeedbackFormValues>({
     resolver: zodResolver(feedbackSchema)
   });
   
