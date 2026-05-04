@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Menu } from "lucide-react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { Menu, X } from "lucide-react"; // Added X for closing
+import { motion, AnimatePresence } from "framer-motion";
 
 import { Hero } from "@/features/landing/components/Hero";
 import { Features } from "@/features/landing/components/Features";
@@ -17,158 +17,223 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import Logo from "@/components/Logo";
 import { Footer } from "@/components/Footer";
 import SmartProcessingSection from "@/components/SmartProcessingSection";
-
-
+import { StickyBanner } from "@/components/ui/sticky-banner";
+import { SplashScreen } from "@/components/SplashScreen";
 
 /* =========================
    INFINITY LIGHT BACKGROUND
 ========================= */
 function InfinityLight() {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-
+    // Lower z-index to ensure it stays behind everything
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
       <motion.div
-        animate={{ x: [0, 300, 0] }}
+        animate={{ x: [0, 100, 0], opacity: [0.1, 0.2, 0.1] }} // Reduced movement for mobile performance
         transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute w-[600px] h-[600px] bg-blue-500/20 blur-3xl rounded-full left-[-250px] top-1/3"
+        className="absolute w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-blue-500/20 blur-[80px] md:blur-3xl rounded-full left-[-150px] top-1/3"
       />
-
       <motion.div
-        animate={{ x: [0, -300, 0] }}
+        animate={{ x: [0, -100, 0], opacity: [0.1, 0.2, 0.1] }}
         transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute w-[500px] h-[500px] bg-purple-500/20 blur-3xl rounded-full right-[-250px] top-1/4"
-      />
-
-      <motion.div
-        animate={{ scale: [1, 1.2, 1] }}
-        transition={{ duration: 8, repeat: Infinity }}
-        className="absolute w-[700px] h-[700px] bg-pink-500/10 blur-[120px] rounded-full left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+        className="absolute w-[250px] md:w-[500px] h-[250px] md:h-[500px] bg-purple-500/20 blur-[80px] md:blur-3xl rounded-full right-[-150px] top-1/4"
       />
     </div>
   );
 }
 
-/* =========================
-   MAIN PAGE
-========================= */
 export default function Home() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isBannerOpen, setIsBannerOpen] = useState(true);
+  const [bannerHeight, setBannerHeight] = useState(40);
+  const bannerRef = useRef<HTMLDivElement>(null);
+
+  // Close mobile menu when a link is clicked
+  const closeMenu = () => setIsMobileMenuOpen(false);
+
+  // Measure real banner height (handles text wrapping on small screens)
+  useEffect(() => {
+    const measure = () => {
+      if (bannerRef.current) {
+        setBannerHeight(bannerRef.current.scrollHeight);
+      }
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [isBannerOpen]);
+
+  // Prevent scrolling when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+  }, [isMobileMenuOpen]);
 
   return (
-    <div className="relative min-h-screen flex flex-col bg-background text-[#1E1F25] dark:text-white overflow-x-hidden">
+    <div className="relative min-h-screen flex flex-col bg-background text-[#1E1F25] dark:text-white overflow-x-hidden selection:bg-blue-500/30">
+      {/* 🎬 SPLASH SCREEN */}
+      <SplashScreen />
 
-      {/* GLOBAL LIGHT BACKGROUND */}
       <InfinityLight />
 
+      {/* ✅ TOP BANNER */}
+      <StickyBanner
+        ref={bannerRef}
+        className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
+        onOpenChange={setIsBannerOpen}
+      >
+        {/* Mobile: short text | Desktop: full text */}
+        <p className="text-white text-xs sm:text-sm md:text-base font-medium text-center leading-snug px-8">
+          <span className="md:hidden">
+            👋 <span className="font-bold">PixelFlow AI</span> —{" "}
+            <a href="#features" className="underline hover:opacity-80 transition">Explore features</a>
+          </span>
+          <span className="hidden md:inline">
+            👋 Welcome to <span className="font-bold">PixelFlow AI</span> — AI-powered image processing & design workspace.{" "}
+            <a href="#features" className="underline ml-2 hover:opacity-80 transition">Explore features</a>
+          </span>
+        </p>
+      </StickyBanner>
+
       {/* ================= NAVBAR ================= */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-zinc-200/50 dark:border-white/5 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl">
-
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-
-          {/* LOGO */}
-          <Link href="/" className="flex items-center gap-2">
+      <motion.header
+        animate={{ top: isBannerOpen ? bannerHeight : 0 }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        className="fixed left-0 right-0 z-[100] border-b border-zinc-200/100 dark:border-white/5 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl"
+      >
+        <div className="container mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 shrink-0 z-50">
             <Logo />
           </Link>
 
-          {/* DESKTOP MENU */}
-          <nav className="hidden md:flex items-center gap-8">
-            <Link href="#features" className="text-sm font-semibold text-zinc-500 hover:text-black dark:hover:text-white">
-              Product
-            </Link>
-            <Link href="#how-it-works" className="text-sm font-semibold text-zinc-500 hover:text-black dark:hover:text-white">
-              Solutions
-            </Link>
-            <Link href="#testimonials" className="text-sm font-semibold text-zinc-500 hover:text-black dark:hover:text-white">
-              Customers
-            </Link>
-            <Link href="#pricing" className="text-sm font-semibold text-zinc-500 hover:text-black dark:hover:text-white">
-              Pricing
-            </Link>
+          {/* DESKTOP NAVIGATION */}
+          <nav className="hidden md:flex items-center gap-6 lg:gap-8">
+            {["Product", "Solutions", "Customers", "Pricing"].map((item) => (
+              <Link
+                key={item}
+                href={`#${item.toLowerCase()}`}
+                className="text-sm font-medium text-zinc-500 hover:text-black dark:hover:text-white transition-colors"
+              >
+                {item}
+              </Link>
+            ))}
           </nav>
 
-          {/* RIGHT */}
           <div className="hidden md:flex items-center gap-4">
             <ThemeToggle />
-
-            <Link href="#editor" className="text-sm font-semibold text-zinc-500">
+            <Link href="#login" className="text-sm font-semibold text-zinc-500 hover:text-black dark:hover:text-white">
               Log in
             </Link>
-
-            <Button className="rounded-full bg-black text-white dark:bg-white dark:text-black px-6">
+            <Button className="rounded-full px-6 py-6 shadow-lg hover:shadow-indigo-500/20 transition-all">
               Get Started
             </Button>
           </div>
 
-          {/* MOBILE */}
-          <div className="md:hidden flex items-center gap-2">
+          {/* MOBILE TOGGLE */}
+          <div className="md:hidden flex items-center gap-3">
             <ThemeToggle />
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-              <Menu />
+            <button
+              className="p-2 z-50"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Toggle menu"
+            >
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
 
-        {/* MOBILE MENU */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden bg-white dark:bg-zinc-950 px-6 py-4 flex flex-col gap-4 border-t">
-            <Link href="#features">Product</Link>
-            <Link href="#how-it-works">Solutions</Link>
-            <Button className="w-full">Get Started</Button>
-          </div>
-        )}
-      </header>
+        {/* ENHANCED MOBILE MENU */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="absolute top-16 left-0 right-0 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-white/10 px-6 py-8 flex flex-col gap-6 md:hidden shadow-2xl overflow-y-auto"
+              style={{ height: `calc(100vh - 4rem - ${isBannerOpen ? bannerHeight : 0}px)` }}
+            >
+              <div className="flex flex-col gap-6 text-xl font-medium">
+                <Link onClick={closeMenu} href="#features">Product</Link>
+                <Link onClick={closeMenu} href="#solutions">Solutions</Link>
+                <Link onClick={closeMenu} href="#testimonials">Customers</Link>
+                <Link onClick={closeMenu} href="#pricing">Pricing</Link>
+              </div>
+              <hr className="border-zinc-100 dark:border-white/5" />
+              <div className="flex flex-col gap-4">
+                <Button className="w-full py-6 text-lg rounded-xl">Get Started</Button>
+                <Button variant="ghost" className="w-full py-6 text-lg">Log In</Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.header>
 
       {/* ================= MAIN ================= */}
-      <main className="flex-1 pt-20">
+      {/* paddingTop = navbar (64px) + banner height (or 0) so content never hides under fixed stack */}
+      <main
+        className="flex-1 relative z-10 transition-[padding-top] duration-300 ease-in-out"
+        style={{ paddingTop: `calc(4rem + ${isBannerOpen ? bannerHeight : 0}px)` }}
+      >
 
-        {/* HERO */}
+        {/* HERO - Handled by internal component, but ensure it has responsive padding */}
         <Hero />
 
-        {/* EDITOR */}
-        <div id="editor" className="relative py-20 px-4 sm:px-6 md:px-10">
-
+        {/* EDITOR WORKSPACE WRAPPER */}
+        <section id="editor" className="py-12 md:py-24 px-4 sm:px-6">
           <div className="container mx-auto">
-
-            <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl md:rounded-[2rem] p-4 shadow-xl">
-
-              {/* mac controls */}
-              <div className="hidden sm:flex gap-2 mb-4">
-                <div className="w-3 h-3 rounded-full bg-red-400" />
-                <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                <div className="w-3 h-3 rounded-full bg-green-400" />
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="bg-zinc-100/50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/10 rounded-2xl md:rounded-[2.5rem] p-2 md:p-4 shadow-2xl overflow-hidden"
+            >
+              {/* Browser-like window header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-white/5 md:border-none">
+                <div className="flex gap-1.5 md:gap-2">
+                  <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-red-400" />
+                  <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-yellow-400" />
+                  <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-green-400" />
+                </div>
+                <div className="md:hidden text-[10px] uppercase tracking-widest text-zinc-400 font-bold">
+                  Editor Preview
+                </div>
+                <div className="w-12 hidden md:block" /> {/* Spacer */}
               </div>
 
-              <div className="bg-white dark:bg-zinc-950 rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10">
+              {/* The Actual Workspace */}
+              <div className="bg-white dark:bg-zinc-950 rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10 shadow-inner">
+                {/* Ensure EditorWorkspace is internally responsive */}
                 <EditorWorkspace />
               </div>
-
-            </div>
-
+            </motion.div>
           </div>
-        </div>
+        </section>
 
-        {/* FEATURES */}
-        <Features />
-        {/* <PrintPixHeroAndFeature /> */}
-        <SmartProcessingSection />
-        {/* HOW IT WORKS */}
-        <HowItWorks />
+        {/* CORE SECTIONS */}
+        <section id="features" className="relative">
+          <Features />
+        </section>
 
-        {/* TESTIMONIALS */}
-        <Testimonials />
+        <section className="py-12 md:py-20 bg-zinc-50/30 dark:bg-zinc-900/10">
+          <SmartProcessingSection />
+        </section>
 
-        {/* CTA */}
-        <CTA />
+        <section id="how-it-works">
+          <HowItWorks />
+        </section>
 
-        {/* ================= PRINTPIX SECTION ================= */}
+        <section id="testimonials">
+          <Testimonials />
+        </section>
 
-
-
+        <section className="pb-20">
+          <CTA />
+        </section>
       </main>
 
-      {/* FOOTER */}
       <Footer />
-
     </div>
   );
 }

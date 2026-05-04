@@ -104,19 +104,18 @@ export default function SmartProcessingSection() {
   return (
     <section className="relative w-full py-32 bg-white dark:bg-zinc-950 overflow-hidden">
       
-      {/* ================= HIGH-VISIBILITY GRID BACKGROUND ================= */}
+      {/* ================= UPDATED LEFT-TO-RIGHT FADE GRID ================= */}
       <div className="absolute inset-0 z-0 pointer-events-none">
-        {/* The Grid Box Effect */}
         <div 
           className="absolute inset-0 
             bg-[linear-gradient(to_right,#e5e7eb_1px,transparent_1px),linear-gradient(to_bottom,#e5e7eb_1px,transparent_1px)] 
             dark:bg-[linear-gradient(to_right,#ffffff10_1px,transparent_1px),linear-gradient(to_bottom,#ffffff10_1px,transparent_1px)] 
-            bg-[size:40px_40px]" 
+            bg-[size:40px_40px]
+            [mask-image:linear-gradient(to_right,black_0%,transparent_100%)]" 
         />
         
-        {/* The Radial Fade (Important: Makes the grid fade out toward the edges) */}
-        <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-white dark:from-zinc-950 dark:via-transparent dark:to-zinc-950 opacity-100" />
-        <div className="absolute inset-0 bg-gradient-to-r from-white via-transparent to-white dark:from-zinc-950 dark:via-transparent dark:to-zinc-950 opacity-100" />
+        {/* Secondary Vertical/Horizontal Soft Fades to blend edges */}
+        <div className="absolute inset-0 bg-gradient-to-b from-white via-transparent to-white dark:from-zinc-950 dark:via-transparent dark:to-zinc-950 opacity-100" />
       </div>
 
       <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 lg:gap-24 items-center relative z-10">
@@ -150,7 +149,7 @@ export default function SmartProcessingSection() {
         {/* ANIMATION BOX */}
         <div
           ref={containerRef}
-          className="order-1 md:order-2 relative h-[450px] w-full flex items-center justify-center rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/30 backdrop-blur-md"
+          className="order-1 md:order-2 relative h-[450px] w-full flex items-center justify-center rounded-[2.5rem] backdrop-blur-md"
         >
           {/* INPUT NODES (Left) */}
           <div className="absolute left-10 flex flex-col gap-12">
