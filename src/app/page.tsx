@@ -40,7 +40,7 @@ export default function Home() {
       <Hero />
 
       {/* EDITOR WORKSPACE WRAPPER */}
-      <section id="editor" className="py-12 md:py-24 px-4 sm:px-6">
+      <section id="editor" className="py-10 md:py-24 px-4 sm:px-6">
         <div className="container mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 40 }}

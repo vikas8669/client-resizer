@@ -6,7 +6,7 @@ import { ArrowRight } from 'lucide-react';
 
 export function Hero() {
   return (
-    <section className="relative pt-32 md:pt-48 pb-20 bg-background overflow-hidden flex flex-col items-center">
+    <section className="relative pt-12 md:pt-20 pb-20 bg-background overflow-hidden flex flex-col items-center">
       
       {/* ================= NEW HIGH-VISIBILITY GRID ================= */}
       <div className="absolute inset-0 z-0 pointer-events-none">
