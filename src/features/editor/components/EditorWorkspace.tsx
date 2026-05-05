@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+
 const PRESETS = [
   { name: 'Passport (2x2)', width: 600, height: 600 },
   { name: 'PAN/Aadhaar', width: 413, height: 531 },

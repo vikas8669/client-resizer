@@ -64,6 +64,8 @@ export default function SignupPage() {
     { label: "Special", met: /[^A-Za-z0-9]/.test(passwordValue) },
   ];
 
+
+  
   const onSubmit = async (data: z.infer<typeof signupSchema>) => {
     try {
       setIsSubmitting(true);
