@@ -15,20 +15,24 @@ import { getDashboardPath, getStoredUser } from '@/lib/auth';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // ✅ Schema (no confirm password, space handled only in password)
 const signupSchema = z.object({
-  name: z.string().min(2, "Required"),
-  email: z.string().email("Invalid email"),
+  name: z.string().min(2, "Name is too short"),
+  email: z.string().email("Invalid email address"),
   password: z.string()
-    .transform((val) => val.replace(/\s/g, ""))
-    .pipe(
-      z.string()
-        .min(8, "8+ chars")
-        .regex(/[A-Z]/)
-        .regex(/[0-9]/)
-        .regex(/[^A-Za-z0-9]/)
-    ),
+    .min(8, "Must be 8+ characters")
+    .regex(/[A-Z]/, "Must have an uppercase letter")
+    .regex(/[a-z]/, "Must have a lowercase letter")
+    .regex(/[0-9]/, "Must have a number"),
 });
 
 export default function SignupPage() {
@@ -37,6 +41,10 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  
+  // Rate limit state
+  const [isLimitDialogOpen, setIsLimitDialogOpen] = useState(false);
+  const [limitMessage, setLimitMessage] = useState('');
 
   useEffect(() => {
     const user = getStoredUser();
@@ -60,8 +68,8 @@ export default function SignupPage() {
   const requirements = [
     { label: "8+ chars", met: passwordValue.length >= 8 },
     { label: "Uppercase", met: /[A-Z]/.test(passwordValue) },
+    { label: "Lowercase", met: /[a-z]/.test(passwordValue) },
     { label: "Number", met: /[0-9]/.test(passwordValue) },
-    { label: "Special", met: /[^A-Za-z0-9]/.test(passwordValue) },
   ];
 
 
@@ -69,6 +77,7 @@ export default function SignupPage() {
   const onSubmit = async (data: z.infer<typeof signupSchema>) => {
     try {
       setIsSubmitting(true);
+      console.log('Sending signup request...', { name: data.name, email: data.email });
       await signup.mutateAsync({
         name: data.name.trim(),
         email: data.email.trim().toLowerCase(),
@@ -78,8 +87,15 @@ export default function SignupPage() {
       form.reset();
       const user = getStoredUser();
       router.push(getDashboardPath(user));
-    } catch (err) {
-      toast.error("Signup failed");
+    } catch (err: any) {
+      console.error('Signup failed', err);
+      if (err.response?.data?.code === 'RATE_LIMIT_EXCEEDED') {
+        setLimitMessage(err.response.data.message);
+        setIsLimitDialogOpen(true);
+      } else {
+        const backendMessage = err.response?.data?.message || "Signup failed";
+        toast.error(backendMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -221,7 +237,8 @@ export default function SignupPage() {
 
               {/* BUTTON */}
               <Button
-                disabled={!form.formState.isValid || isSubmitting}
+                type="submit"
+                disabled={isSubmitting}
                 className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 h-10 text-sm shadow-lg shadow-blue-500/10"
               >
                 {isSubmitting ? "Creating..." : "Sign Up"}
@@ -236,6 +253,32 @@ export default function SignupPage() {
           </p>
         </motion.div>
       </div>
+
+      <Dialog open={isLimitDialogOpen} onOpenChange={setIsLimitDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-white dark:bg-zinc-900 border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-red-600 dark:text-red-500">
+              Access Restricted
+            </DialogTitle>
+            <DialogDescription className="text-zinc-600 dark:text-zinc-400 pt-2 text-base">
+              {limitMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 p-4 rounded-xl mt-2">
+            <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
+              Too many signup attempts detected. Please try again later to protect your account.
+            </p>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button 
+              className="w-full h-12 rounded-xl bg-zinc-900 dark:bg-white dark:text-zinc-900 text-white font-bold" 
+              onClick={() => setIsLimitDialogOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

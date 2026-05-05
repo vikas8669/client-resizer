@@ -58,10 +58,19 @@ export function EditorWorkspace() {
   const [printLayoutUrl, setPrintLayoutUrl] = useState<string | null>(null);
   const [currentImageId, setCurrentImageId] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<'process' | 'remove-bg' | 'print' | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   
   // Rate limit state
   const [isLimitDialogOpen, setIsLimitDialogOpen] = useState(false);
   const [limitDialogContent, setLimitDialogContent] = useState({ title: '', message: '' });
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const NUDGE_STEP = 0.2;
   const autoApplyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -153,7 +162,8 @@ export function EditorWorkspace() {
         });
         setIsLimitDialogOpen(true);
       } else {
-        toast.error('Failed to process image');
+        const backendMessage = error.response?.data?.message || 'Failed to process image';
+        toast.error(backendMessage);
       }
     } finally {
       setIsProcessing(false);
@@ -257,7 +267,8 @@ export function EditorWorkspace() {
         });
         setIsLimitDialogOpen(true);
       } else {
-        toast.error('Failed to remove background');
+        const backendMessage = error.response?.data?.message || 'Failed to remove background';
+        toast.error(backendMessage);
       }
     } finally {
       setIsProcessing(false);
@@ -426,32 +437,54 @@ export function EditorWorkspace() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl p-8 text-center shadow-sm"
+            className="mt-8 p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-200 dark:border-zinc-800"
           >
-            <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4">
-              <LayoutTemplate className="w-6 h-6" />
-            </div>
-            <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-6">A4 Print Layout Ready</h3>
-            <iframe title="Print Layout PDF" src={printLayoutUrl} className="w-full h-[420px] mx-auto mb-8 border border-zinc-200 shadow-lg rounded-md bg-white" />
-            <button
-              type="button"
-              onClick={() => setPrintLayoutUrl(null)}
-              className="text-xs text-zinc-500 hover:text-zinc-700 mb-4 underline underline-offset-4"
-            >
-              Clear this preview
-            </button>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <a
-                href={printLayoutUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={buttonVariants({ variant: "outline", className: "px-8 py-6 rounded-xl font-semibold" })}
+            <h3 className="text-lg font-bold mb-4 text-center">A4 Print Layout Preview</h3>
+            
+            {isMobile ? (
+              <div className="flex flex-col items-center justify-center p-8 bg-white dark:bg-zinc-900 rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 mb-6">
+                <LayoutTemplate className="w-12 h-12 text-zinc-400 mb-4" />
+                <p className="text-sm text-zinc-500 text-center mb-6">
+                  Mobile browsers often block PDF previews. Tap below to view your high-res layout.
+                </p>
+                <a 
+                  href={printLayoutUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className={buttonVariants({ variant: "default", size: "lg", className: "w-full rounded-xl" })}
+                >
+                  View PDF in New Tab
+                </a>
+              </div>
+            ) : (
+              <iframe 
+                title="Print Layout PDF" 
+                src={printLayoutUrl} 
+                className="w-full h-[500px] mx-auto mb-8 border border-zinc-200 shadow-lg rounded-xl bg-white" 
+              />
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <a 
+                href={printLayoutUrl} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className={buttonVariants({ variant: "outline", size: "lg", className: "px-8 py-6 rounded-xl border-zinc-200" })}
               >
                 Open Fullscreen PDF
               </a>
               <a href={`${printLayoutUrl}?download=true`} target="_blank" rel="noopener noreferrer" className={buttonVariants({ size: "lg", className: "px-8 py-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-xl transition-all" })}>
                 <Download className="w-5 h-5 mr-2" /> Download High-Res A4
               </a>
+            </div>
+            <div className="text-center mt-4">
+              <button
+                type="button"
+                onClick={() => setPrintLayoutUrl(null)}
+                className="text-xs text-zinc-500 hover:text-zinc-700 underline underline-offset-4"
+              >
+                Clear this preview
+              </button>
             </div>
           </motion.div>
         )}

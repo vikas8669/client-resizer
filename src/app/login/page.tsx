@@ -6,6 +6,15 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { getDashboardPath, getStoredUser } from "@/lib/auth";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 const GoogleIcon = () => (
   <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5">
@@ -20,6 +29,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  
+  // Rate limit state
+  const [isLimitDialogOpen, setIsLimitDialogOpen] = useState(false);
+  const [limitMessage, setLimitMessage] = useState('');
 
   useEffect(() => {
     const user = getStoredUser();
@@ -34,13 +47,20 @@ export default function LoginPage() {
     event.preventDefault();
     setIsSubmitting(true);
     try {
+      console.log('Sending login request...', { email });
       await login.mutateAsync({ email, password });
       toast.success("Logged in successfully");
       const user = getStoredUser();
       router.push(getDashboardPath(user));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Login failed";
-      toast.error(message);
+    } catch (error: any) {
+      console.error('Login failed', error);
+      if (error.response?.data?.code === 'RATE_LIMIT_EXCEEDED') {
+        setLimitMessage(error.response.data.message);
+        setIsLimitDialogOpen(true);
+      } else {
+        const backendMessage = error.response?.data?.message || "Login failed";
+        toast.error(backendMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -166,6 +186,32 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+
+      <Dialog open={isLimitDialogOpen} onOpenChange={setIsLimitDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-white dark:bg-zinc-900 border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-red-600 dark:text-red-500">
+              Access Restricted
+            </DialogTitle>
+            <DialogDescription className="text-zinc-600 dark:text-zinc-400 pt-2 text-base">
+              {limitMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 p-4 rounded-xl mt-2">
+            <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
+              We've detected too many requests from your IP address. To prevent abuse, your access has been temporarily limited.
+            </p>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button 
+              className="w-full h-12 rounded-xl bg-zinc-900 dark:bg-white dark:text-zinc-900 text-white font-bold" 
+              onClick={() => setIsLimitDialogOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
