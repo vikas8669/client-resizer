@@ -56,6 +56,7 @@ export function useAuth() {
     },
     onSettled: () => {
       clearStoredUser();
+      window.location.href = '/login';
     },
   });
 
