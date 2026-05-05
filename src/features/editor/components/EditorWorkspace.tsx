@@ -14,6 +14,14 @@ import apiClient from '@/api/api';
 import { ENDPOINTS, SERVER_BASE_URL } from '@/api/endpoints';
 import { Download, RefreshCw, LayoutTemplate, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const PRESETS = [
   { name: 'Passport (2x2)', width: 600, height: 600 },
@@ -47,7 +55,12 @@ export function EditorWorkspace() {
   } = useEditorStore();
 
   const [printLayoutUrl, setPrintLayoutUrl] = useState<string | null>(null);
+  const [currentImageId, setCurrentImageId] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<'process' | 'remove-bg' | 'print' | null>(null);
+  
+  // Rate limit state
+  const [isLimitDialogOpen, setIsLimitDialogOpen] = useState(false);
+  const [limitDialogContent, setLimitDialogContent] = useState({ title: '', message: '' });
   const NUDGE_STEP = 0.2;
   const autoApplyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -74,7 +87,12 @@ export function EditorWorkspace() {
     if (!fullUrl.startsWith(normalizedBase)) {
       return null;
     }
-    return fullUrl.slice(normalizedBase.length);
+    let path = fullUrl.slice(normalizedBase.length);
+    
+    // Strip the proxy prefix if it exists (handles /api/images/file/ or api/images/file/)
+    path = path.replace(/^\/?api\/images\/file\//, '');
+    
+    return path;
   };
 
   const nudgeFocus = (dx: number, dy: number) => {
@@ -90,16 +108,22 @@ export function EditorWorkspace() {
     setActiveTask('process');
     setIsProcessing(true);
     try {
-      const formData = new FormData();
-      formData.append('image', originalFile);
-      
-      const uploadRes = await apiClient.post(ENDPOINTS.UPLOAD, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      
-      const imageId = uploadRes.data?.data?._id;
+      let imageId = currentImageId;
+
+      // Only upload if we don't have an ID yet
       if (!imageId) {
-        throw new Error('Upload failed: missing image id');
+        const formData = new FormData();
+        formData.append('image', originalFile);
+        
+        const uploadRes = await apiClient.post(ENDPOINTS.UPLOAD, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        
+        imageId = uploadRes.data?.data?._id;
+        if (!imageId) {
+          throw new Error('Upload failed: missing image id');
+        }
+        setCurrentImageId(imageId);
       }
       
       const processRes = await apiClient.post(ENDPOINTS.PROCESS, {
@@ -118,9 +142,18 @@ export function EditorWorkspace() {
       setProcessedImageUrl(fullUrl);
       toast.success('Image processed successfully!');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Processing failed', error);
-      toast.error('Failed to process image');
+      
+      if (error.response?.data?.code === 'RATE_LIMIT_EXCEEDED') {
+        setLimitDialogContent({
+          title: 'Daily Limit Reached',
+          message: error.response.data.message
+        });
+        setIsLimitDialogOpen(true);
+      } else {
+        toast.error('Failed to process image');
+      }
     } finally {
       setIsProcessing(false);
       setActiveTask(null);
@@ -154,17 +187,26 @@ export function EditorWorkspace() {
         gapMm: PASSPORT_PRINT_GAP_MM,
       });
 
-      const pdfPath = printRes.data?.pdf;
-      const fullUrl = pdfPath ? `${SERVER_BASE_URL}/${pdfPath}` : null;
+      const downloadUrl = printRes.data?.downloadUrl;
+      const fullUrl = downloadUrl ? `${SERVER_BASE_URL}${downloadUrl}` : null;
       if (!fullUrl) {
-        throw new Error('Print generation failed: missing pdf path');
+        throw new Error('Print generation failed: missing download URL');
       }
       setPrintLayoutUrl(fullUrl);
       toast.success(`A4 layout for ${layoutCount} passport-size copies generated!`);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Print layout failed', error);
-      toast.error('Failed to generate print layout');
+      
+      if (error.response?.data?.code === 'RATE_LIMIT_EXCEEDED') {
+        setLimitDialogContent({
+          title: 'Print Limit Reached',
+          message: error.response.data.message
+        });
+        setIsLimitDialogOpen(true);
+      } else {
+        toast.error('Failed to generate print layout');
+      }
     } finally {
       setIsProcessing(false);
       setActiveTask(null);
@@ -177,16 +219,21 @@ export function EditorWorkspace() {
     setActiveTask('remove-bg');
     setIsProcessing(true);
     try {
-      const formData = new FormData();
-      formData.append('image', originalFile);
+      let imageId = currentImageId;
 
-      const uploadRes = await apiClient.post(ENDPOINTS.UPLOAD, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      const imageId = uploadRes.data?.data?._id;
       if (!imageId) {
-        throw new Error('Upload failed: missing image id');
+        const formData = new FormData();
+        formData.append('image', originalFile);
+
+        const uploadRes = await apiClient.post(ENDPOINTS.UPLOAD, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+
+        imageId = uploadRes.data?.data?._id;
+        if (!imageId) {
+          throw new Error('Upload failed: missing image id');
+        }
+        setCurrentImageId(imageId);
       }
 
       const removeBgRes = await apiClient.post(ENDPOINTS.REMOVE_BG, { imageId });
@@ -199,9 +246,18 @@ export function EditorWorkspace() {
 
       setProcessedImageUrl(fullUrl);
       toast.success('Background removed. You can print this image now.');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Remove background failed', error);
-      toast.error('Failed to remove background');
+      
+      if (error.response?.data?.code === 'RATE_LIMIT_EXCEEDED') {
+        setLimitDialogContent({
+          title: 'Action Limit Reached',
+          message: error.response.data.message
+        });
+        setIsLimitDialogOpen(true);
+      } else {
+        toast.error('Failed to remove background');
+      }
     } finally {
       setIsProcessing(false);
       setActiveTask(null);
@@ -210,6 +266,7 @@ export function EditorWorkspace() {
 
   const handleStartOver = () => {
     setPrintLayoutUrl(null);
+    setCurrentImageId(null);
     window.sessionStorage.removeItem('printLayoutUrl');
     reset();
   };
@@ -391,7 +448,7 @@ export function EditorWorkspace() {
               >
                 Open Fullscreen PDF
               </a>
-              <a href={printLayoutUrl} download target="_blank" rel="noopener noreferrer" className={buttonVariants({ size: "lg", className: "px-8 py-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-xl transition-all" })}>
+              <a href={`${printLayoutUrl}?download=true`} target="_blank" rel="noopener noreferrer" className={buttonVariants({ size: "lg", className: "px-8 py-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-xl transition-all" })}>
                 <Download className="w-5 h-5 mr-2" /> Download High-Res A4
               </a>
             </div>
@@ -627,6 +684,32 @@ export function EditorWorkspace() {
           </Button>
         </div>
       </div>
+      {/* Rate Limit Dialog */}
+      <Dialog open={isLimitDialogOpen} onOpenChange={setIsLimitDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-white dark:bg-zinc-900 border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-red-600 dark:text-red-500">
+              {limitDialogContent.title}
+            </DialogTitle>
+            <DialogDescription className="text-zinc-600 dark:text-zinc-400 pt-2 text-base">
+              {limitDialogContent.message}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 p-4 rounded-xl mt-2">
+            <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
+              To ensure fair usage and manage costs, we limit some high-resource actions on the free tier. 
+            </p>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button 
+              className="w-full h-12 rounded-xl bg-zinc-900 dark:bg-white dark:text-zinc-900 text-white font-bold" 
+              onClick={() => setIsLimitDialogOpen(false)}
+            >
+              I Understand
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
