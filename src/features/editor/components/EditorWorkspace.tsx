@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
 import { Dropzone } from './Dropzone';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
@@ -28,6 +28,7 @@ const PRINT_LAYOUTS = [
   { name: '32 Copies', count: 32 },
   { name: '52 Copies', count: 52 },
 ];
+const PASSPORT_PRINT_GAP_MM = 2;
 const MIN_DIMENSION = 100;
 const MAX_DIMENSION = 3000;
 const DIMENSION_STEP = 10;
@@ -48,6 +49,7 @@ export function EditorWorkspace() {
   const [printLayoutUrl, setPrintLayoutUrl] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<'process' | 'remove-bg' | 'print' | null>(null);
   const NUDGE_STEP = 0.2;
+  const autoApplyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const saved = window.sessionStorage.getItem('printLayoutUrl');
@@ -65,6 +67,9 @@ export function EditorWorkspace() {
   }, [printLayoutUrl]);
 
   const extractServerPath = (fullUrl: string) => {
+    if (!SERVER_BASE_URL) {
+      return null;
+    }
     const normalizedBase = SERVER_BASE_URL.endsWith('/') ? SERVER_BASE_URL : `${SERVER_BASE_URL}/`;
     if (!fullUrl.startsWith(normalizedBase)) {
       return null;
@@ -145,7 +150,8 @@ export function EditorWorkspace() {
 
       const printRes = await apiClient.post(ENDPOINTS.PRINT_LAYOUT, {
         images: [imagePath],
-        type: layoutCount
+        type: layoutCount,
+        gapMm: PASSPORT_PRINT_GAP_MM,
       });
 
       const pdfPath = printRes.data?.pdf;
@@ -234,6 +240,30 @@ export function EditorWorkspace() {
       toast.error('Failed to download image');
     }
   };
+
+  useEffect(() => {
+    if (!originalFile || isProcessing) {
+      return;
+    }
+
+    if (!settings.width && !settings.height) {
+      return;
+    }
+
+    if (autoApplyTimeoutRef.current) {
+      clearTimeout(autoApplyTimeoutRef.current);
+    }
+
+    autoApplyTimeoutRef.current = setTimeout(() => {
+      handleProcess();
+    }, 450);
+
+    return () => {
+      if (autoApplyTimeoutRef.current) {
+        clearTimeout(autoApplyTimeoutRef.current);
+      }
+    };
+  }, [originalFile, settings.width, settings.height, settings.focalX, settings.focalY]);
 
   if (!originalImageUrl) {
     return (
@@ -442,6 +472,7 @@ export function EditorWorkspace() {
                 />
               </div>
               <p className="text-xs text-zinc-500 font-medium">Leave an input empty to maintain original aspect ratio.</p>
+              <p className="text-xs text-zinc-500 font-medium">After first preview, slider changes auto-update output.</p>
 
               {settings.width && settings.height && (
                 <div className="pt-2">

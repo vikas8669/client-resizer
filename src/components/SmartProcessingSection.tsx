@@ -102,7 +102,7 @@ export default function SmartProcessingSection() {
   const outRef = useRef<HTMLDivElement | null>(null);
 
   return (
-    <section className="relative w-full py-32 bg-white dark:bg-zinc-950 overflow-hidden">
+    <section className="relative w-full py-32  dark:bg-zinc-950 overflow-hidden">
       
       {/* ================= UPDATED LEFT-TO-RIGHT FADE GRID ================= */}
       <div className="absolute inset-0 z-0 pointer-events-none">
@@ -163,7 +163,7 @@ export default function SmartProcessingSection() {
             <Node 
               icon={Sparkles} 
               innerRef={outRef} 
-              className="w-24 h-24 border-indigo-500/30 bg-white dark:bg-zinc-800" 
+              className="w-24 h-24 border-indigo-500/30  dark:bg-zinc-800" 
             />
           </div>
 
