@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, X, UserCircle2, KeyRound, MailQuestion, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -12,12 +12,17 @@ import { Footer } from "@/components/Footer";
 import { StickyBanner } from "@/components/ui/sticky-banner";
 import { SplashScreen } from "@/components/SplashScreen";
 import { cn } from "@/lib/utils";
+import { AuthUser, getStoredUser } from "@/lib/auth";
+import { useAuth } from "@/hooks/useAuth";
 
 export function SiteLayout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isBannerOpen, setIsBannerOpen] = useState(true);
   const [bannerHeight, setBannerHeight] = useState(40);
   const bannerRef = useRef<HTMLDivElement>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const { logout } = useAuth();
 
   const closeMenu = () => setIsMobileMenuOpen(false);
 
@@ -39,6 +44,23 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
       document.body.style.overflow = "unset";
     }
   }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    const refreshUser = () => setUser(getStoredUser());
+    refreshUser();
+    window.addEventListener("auth-user-updated", refreshUser);
+    window.addEventListener("storage", refreshUser);
+    return () => {
+      window.removeEventListener("auth-user-updated", refreshUser);
+      window.removeEventListener("storage", refreshUser);
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await logout.mutateAsync();
+    setIsProfileMenuOpen(false);
+    setIsMobileMenuOpen(false);
+  };
 
   return (
     <div className="relative min-h-screen flex flex-col bg-background text-[#1E1F25] dark:text-white overflow-x-hidden selection:bg-blue-500/30">
@@ -86,9 +108,47 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
 
           <div className="hidden md:flex items-center gap-4">
             <ThemeToggle />
-            <Link href="/login" className="text-sm font-semibold text-zinc-500 hover:text-black dark:hover:text-white">
-              Log in
-            </Link>
+            {user ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 dark:bg-zinc-900 dark:border-white/10 dark:text-zinc-200"
+                >
+                  <UserCircle2 className="h-4 w-4" />
+                  {user.name}
+                </button>
+                {isProfileMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-52 rounded-xl border border-zinc-200 bg-white p-2 shadow-lg dark:bg-zinc-900 dark:border-white/10">
+                    <Link href="/dashboard" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/10" onClick={() => setIsProfileMenuOpen(false)}>
+                      <UserCircle2 className="h-4 w-4" />
+                      Dashboard
+                    </Link>
+                    <Link href="/change-password" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/10" onClick={() => setIsProfileMenuOpen(false)}>
+                      <KeyRound className="h-4 w-4" />
+                      Change Password
+                    </Link>
+                    <Link href="/forgot-password" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/10" onClick={() => setIsProfileMenuOpen(false)}>
+                      <MailQuestion className="h-4 w-4" />
+                      Forgot Password
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={logout.isPending}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      {logout.isPending ? "Logging out..." : "Logout"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link href="/login" className="text-sm font-semibold text-zinc-500 hover:text-black dark:hover:text-white">
+                Log in
+              </Link>
+            )}
             <Button className="rounded-full px-6 py-6 shadow-lg hover:shadow-indigo-500/20 transition-all">
               Get Started
             </Button>
@@ -126,13 +186,33 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
               <hr className="border-zinc-100 dark:border-white/5" />
               <div className="flex flex-col gap-4">
                 <Button className="w-full py-6 text-lg rounded-xl">Get Started</Button>
-                <Link
-                  onClick={closeMenu}
-                  href="/login"
-                  className={buttonVariants({ variant: "ghost", className: "w-full py-6 text-lg" })}
-                >
-                  Log In
-                </Link>
+                {user ? (
+                  <>
+                    <div className="px-2 text-sm font-semibold text-zinc-600 dark:text-zinc-300">
+                      Signed in as {user.name}
+                    </div>
+                    <Link onClick={closeMenu} href="/dashboard" className={buttonVariants({ variant: "ghost", className: "w-full py-6 text-lg" })}>
+                      Dashboard
+                    </Link>
+                    <Link onClick={closeMenu} href="/change-password" className={buttonVariants({ variant: "ghost", className: "w-full py-6 text-lg" })}>
+                      Change Password
+                    </Link>
+                    <Link onClick={closeMenu} href="/forgot-password" className={buttonVariants({ variant: "ghost", className: "w-full py-6 text-lg" })}>
+                      Forgot Password
+                    </Link>
+                    <button type="button" onClick={handleLogout} disabled={logout.isPending} className={buttonVariants({ variant: "ghost", className: "w-full py-6 text-lg text-red-600 hover:text-red-700 disabled:opacity-60" })}>
+                      {logout.isPending ? "Logging out..." : "Logout"}
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    onClick={closeMenu}
+                    href="/login"
+                    className={buttonVariants({ variant: "ghost", className: "w-full py-6 text-lg" })}
+                  >
+                    Log In
+                  </Link>
+                )}
               </div>
             </motion.div>
           )}

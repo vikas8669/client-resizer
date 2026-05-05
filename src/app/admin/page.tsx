@@ -1,11 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '@/api/api';
 import { ENDPOINTS } from '@/api/endpoints';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Star, Users, Image as ImageIcon, MessageSquare } from 'lucide-react';
+import { getDashboardPath, getStoredUser } from '@/lib/auth';
 
 interface AnalyticsData {
   stats: {
@@ -23,15 +25,34 @@ interface AnalyticsData {
 }
 
 export default function AdminDashboard() {
+  const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
   const { data, isLoading, error } = useQuery<AnalyticsData>({
     queryKey: ['analytics'],
     queryFn: async () => {
       const res = await apiClient.get(ENDPOINTS.ANALYTICS);
       return res.data;
     },
-    enabled: false, // Don't fetch automatically
+    enabled: authChecked, // fetch only after auth check
     retry: 0, // Don't retry if server is down
   });
+
+  useEffect(() => {
+    const user = getStoredUser();
+    if (!user) {
+      router.replace('/login');
+      return;
+    }
+    if (user.role !== 'admin') {
+      router.replace(getDashboardPath(user));
+      return;
+    }
+    setAuthChecked(true);
+  }, [router]);
+
+  if (!authChecked) {
+    return <div className="p-8">Checking access...</div>;
+  }
 
   if (isLoading) {
     return <div className="p-8">Loading dashboard...</div>;

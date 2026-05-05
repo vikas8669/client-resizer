@@ -8,6 +8,13 @@ export const ENDPOINTS = {
   PROCESS: '/api/images/process',
   REMOVE_BG: '/api/images/remove-bg',
   PRINT_LAYOUT: '/api/print/generate',
+  LOGIN: '/api/auth/login',
+  SIGNUP: '/api/auth/signup',
+  REFRESH: '/api/auth/refresh',
+  LOGOUT: '/api/auth/logout',
+  CHANGE_PASSWORD: '/api/auth/change-password',
+  FORGOT_PASSWORD: '/api/auth/forgot-password',
+  HISTORY: '/api/auth/history',
   FEEDBACK: '/feedback',
   ANALYTICS: '/feedback/average',
 };
