@@ -50,6 +50,8 @@ export function clearStoredUser() {
   window.dispatchEvent(new Event("auth-user-updated"));
 }
 
+export const logout = clearStoredUser;
+
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(ACCESS_TOKEN_KEY);

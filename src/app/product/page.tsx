@@ -35,6 +35,7 @@ const HOW_TO_USE_STEPS = [
 
 export default function ProductPage() {
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [suggestion, setSuggestion] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { submitFeedback } = useFeedback();
@@ -52,12 +53,15 @@ export default function ProductPage() {
     try {
       await submitFeedback.mutateAsync({
         name: name.trim() || 'Anonymous',
+        email: email.trim(),
         rating: 5,
-        comment: `[Product Page Suggestion] ${trimmedSuggestion}`,
+        comment: trimmedSuggestion,
+        type: 'suggestion',
         tags: ['Product Suggestion'],
       });
       setSuggestion('');
       setName('');
+      setEmail('');
     } catch {
       // toast is handled in the feedback hook
     } finally {
@@ -115,9 +119,15 @@ export default function ProductPage() {
             <p className="mt-1 text-sm text-zinc-600">Tell us what to improve in this product page or print workflow.</p>
 
             <form onSubmit={handleSubmitSuggestion} className="mt-5 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="suggestion-name">Name (Optional)</Label>
-                <Input id="suggestion-name" placeholder="Your name" value={name} onChange={(event) => setName(event.target.value)} />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="suggestion-name">Name (Optional)</Label>
+                  <Input id="suggestion-name" placeholder="Your name" value={name} onChange={(event) => setName(event.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="suggestion-email">Email (Optional)</Label>
+                  <Input id="suggestion-email" type="email" placeholder="your@email.com" value={email} onChange={(event) => setEmail(event.target.value)} />
+                </div>
               </div>
 
               <div className="space-y-2">

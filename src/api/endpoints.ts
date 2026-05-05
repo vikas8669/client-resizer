@@ -15,8 +15,10 @@ export const ENDPOINTS = {
   CHANGE_PASSWORD: '/api/auth/change-password',
   FORGOT_PASSWORD: '/api/auth/forgot-password',
   HISTORY: '/api/auth/history',
-  FEEDBACK: '/feedback',
-  ANALYTICS: '/feedback/average',
+  FEEDBACK: '/api/feedback',
+  RESOLVED_FEEDBACK: '/api/feedback/resolved',
+  RESOLVE_FEEDBACK: (id: string) => `/api/feedback/${id}/resolve`,
+  ANALYTICS: '/api/feedback/average',
 };
 
 // Log API configuration in development
