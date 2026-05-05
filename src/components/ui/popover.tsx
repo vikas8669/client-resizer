@@ -31,8 +31,11 @@ function PopoverContent({
       <PopoverPrimitive.Positioner align={align} sideOffset={sideOffset}>
         <PopoverPrimitive.Popup
           data-slot="popover-content"
+          style={{ zIndex: 99999 }}
           className={cn(
-            "z-[9999] w-80 rounded-2xl border border-zinc-100 bg-white p-0 text-zinc-950 shadow-2xl outline-none data-[side=bottom]:animate-in data-[side=bottom]:fade-in-0 data-[side=bottom]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2",
+            "w-80 rounded-2xl border border-zinc-100 bg-white p-0 text-zinc-950 shadow-2xl outline-none",
+            "data-[side=bottom]:animate-in data-[side=bottom]:fade-in-0 data-[side=bottom]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2",
+            "data-[side=top]:animate-in data-[side=top]:fade-in-0 data-[side=top]:zoom-in-95 data-[side=top]:slide-in-from-bottom-2",
             className
           )}
           {...props}
