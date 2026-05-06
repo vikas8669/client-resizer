@@ -3,81 +3,139 @@
 import React, { useEffect } from 'react';
 import { Star } from 'lucide-react';
 import { useFeedback } from '@/hooks/useFeedback';
-
-interface Feedback {
-  _id: string;
-  name?: string;
-  rating: number;
-  comment: string;
-  tags: string[];
-  createdAt: string;
-}
+import { motion } from 'framer-motion';
 
 export function Testimonials() {
   const { feedback: testimonials, isLoading, refetch } = useFeedback();
 
-  // Attempt to fetch testimonials once on component mount
   useEffect(() => {
     refetch();
   }, [refetch]);
 
   if (isLoading) {
     return (
-      <div className="py-20 md:py-24 bg-background relative border-t border-border transition-colors duration-500">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-zinc-600 dark:text-zinc-400">Loading testimonials...</p>
-        </div>
+      <div className="py-24 text-center">
+        <p className="text-zinc-500">Loading testimonials...</p>
       </div>
     );
   }
 
-  if (!testimonials || testimonials.length === 0) {
-    return null;
-  }
+  if (!testimonials || testimonials.length === 0) return null;
+
+  // duplicate for infinite effect
+  const row1 = testimonials.slice(0, 6);
+  const row2 = testimonials.slice(6, 12).length
+    ? testimonials.slice(6, 12)
+    : testimonials.slice(0, 6);
+
+  const duplicatedRow1 = [...row1, ...row1];
+  const duplicatedRow2 = [...row2, ...row2];
 
   return (
-    <div className="py-20 md:py-24 bg-background relative border-t border-border transition-colors duration-500">
-      <div className="container mx-auto px-4 md:px-6 relative z-10">
-        <div className="text-center max-w-2xl mx-auto mb-12 md:mb-16">
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-zinc-950 dark:text-white mb-4 md:mb-6">
-            Loved by users worldwide
-          </h2>
-          <p className="text-base md:text-lg text-zinc-600 dark:text-zinc-400">
-            See what our users have to say about their experience with ImageSaaS.
-          </p>
-        </div>
+    <div className="py-24 relative overflow-hidden border-t border-zinc-200 dark:border-zinc-800">
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
-          {testimonials.slice(0, 6).map((testimonial) => (
-            <div key={testimonial._id} className="bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 backdrop-blur-md rounded-2xl p-6 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.2)] flex flex-col h-full hover:-translate-y-2 hover:shadow-xl transition-all duration-300">
-              <div className="flex items-center gap-1 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star 
-                    key={i} 
-                    className={`w-5 h-5 ${i < testimonial.rating ? 'fill-yellow-400 text-yellow-400' : 'text-zinc-300 dark:text-zinc-600'}`} 
-                  />
-                ))}
-              </div>
-              <p className="text-zinc-700 dark:text-zinc-300 flex-1 mb-6">&ldquo;{testimonial.comment}&rdquo;</p>
-              
-              <div className="mt-auto flex flex-col gap-3">
-                {testimonial.tags && testimonial.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {testimonial.tags.map(tag => (
-                      <span key={tag} className="text-[10px] uppercase font-bold tracking-wider bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-300 border border-primary/20 px-2 py-1 rounded-sm">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
-                  {testimonial.name || 'Anonymous User'}
-                </p>
-              </div>
-            </div>
+      {/* 🌫️ Fog edges */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-white dark:from-black to-transparent z-10" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-white dark:from-black to-transparent z-10" />
+
+      <div className="max-w-6xl mx-auto text-center mb-16 px-4">
+        <h2 className="text-4xl md:text-5xl font-bold text-zinc-900 dark:text-white mb-4">
+          Loved by users worldwide
+        </h2>
+        <p className="text-zinc-600 dark:text-zinc-400">
+          Real feedback from real users using your platform.
+        </p>
+      </div>
+
+      {/* 🔥 ROW 1 (LEFT → RIGHT) */}
+      <motion.div
+        className="flex gap-6 mb-8"
+        animate={{ x: ['0%', '-50%'] }}
+        transition={{
+          duration: 25,
+          ease: 'linear',
+          repeat: Infinity,
+        }}
+      >
+        {duplicatedRow1.map((item, i) => (
+          <Card key={i} item={item} />
+        ))}
+      </motion.div>
+
+      {/* 🔥 ROW 2 (RIGHT → LEFT) */}
+      <motion.div
+        className="flex gap-6"
+        animate={{ x: ['-50%', '0%'] }}
+        transition={{
+          duration: 25,
+          ease: 'linear',
+          repeat: Infinity,
+        }}
+      >
+        {duplicatedRow2.map((item, i) => (
+          <Card key={i} item={item} />
+        ))}
+      </motion.div>
+    </div>
+  );
+}
+
+/* 💎 Card Component */
+function Card({ item }: any) {
+  return (
+    <div className="
+      min-w-[280px] max-w-[280px]
+      group relative
+      bg-white/70 dark:bg-zinc-900/70
+      backdrop-blur-xl
+      border border-zinc-200/60 dark:border-zinc-800/60
+      rounded-2xl p-6
+      shadow-sm hover:shadow-xl
+      transition-all duration-300
+    ">
+
+      {/* ✨ Glow */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition">
+        <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-cyan-500/10 blur-xl" />
+      </div>
+
+      {/* ⭐ Stars */}
+      <div className="flex gap-1 mb-3">
+        {[...Array(5)].map((_, i) => (
+          <Star
+            key={i}
+            className={`w-4 h-4 ${
+              i < item.rating
+                ? 'fill-yellow-400 text-yellow-400'
+                : 'text-zinc-300 dark:text-zinc-700'
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* 💬 Text */}
+      <p className="text-sm text-zinc-700 dark:text-zinc-300 mb-4 line-clamp-4">
+        “{item.comment}”
+      </p>
+
+      {/* 🏷️ Tags */}
+      {item.tags?.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {item.tags.map((tag: string) => (
+            <span
+              key={tag}
+              className="text-[10px] uppercase font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded"
+            >
+              {tag}
+            </span>
           ))}
         </div>
-      </div>
+      )}
+
+      {/* 👤 User */}
+      <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+        {item.name || 'Anonymous'}
+      </p>
     </div>
   );
 }

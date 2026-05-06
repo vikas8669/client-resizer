@@ -145,7 +145,16 @@ function AdminDashboardContent() {
                   </div>
 
                   {!item.isResolved && (
-                    <Dialog open={isDialogOpen && selectedSuggestionId === item._id}>
+                    <Dialog 
+                      open={isDialogOpen && selectedSuggestionId === item._id} 
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          setIsDialogOpen(false);
+                          setSelectedSuggestionId(null);
+                          setReplyText('');
+                        }
+                      }}
+                    >
                       <DialogTrigger
                         onClick={() => {
                           setSelectedSuggestionId(item._id);
