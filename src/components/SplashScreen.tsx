@@ -4,12 +4,20 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function SplashScreen() {
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(false);
 
-  // Auto-dismiss after 2.5 seconds
   useEffect(() => {
-    const timer = setTimeout(() => setVisible(false), 2500);
-    return () => clearTimeout(timer);
+    // Check if splash has already been shown in this session
+    const hasShown = sessionStorage.getItem('splash-shown');
+    
+    if (!hasShown) {
+      setVisible(true);
+      const timer = setTimeout(() => {
+        setVisible(false);
+        sessionStorage.setItem('splash-shown', 'true');
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   return (

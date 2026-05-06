@@ -12,8 +12,9 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import apiClient from '@/api/api';
 import { ENDPOINTS, SERVER_BASE_URL } from '@/api/endpoints';
-import { Download, RefreshCw, LayoutTemplate, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Download, RefreshCw, LayoutTemplate, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Lock, Unlock, Link, Link2, Ratio, Maximize, Scissors } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -60,9 +61,20 @@ export function EditorWorkspace() {
   const [activeTask, setActiveTask] = useState<'process' | 'remove-bg' | 'print' | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   
-  // Rate limit state
   const [isLimitDialogOpen, setIsLimitDialogOpen] = useState(false);
   const [limitDialogContent, setLimitDialogContent] = useState({ title: '', message: '' });
+  const [originalAspectRatio, setOriginalAspectRatio] = useState<number | null>(null);
+
+  // Load image dimensions to get aspect ratio
+  useEffect(() => {
+    if (originalImageUrl) {
+      const img = new Image();
+      img.onload = () => {
+        setOriginalAspectRatio(img.width / img.height);
+      };
+      img.src = originalImageUrl;
+    }
+  }, [originalImageUrl]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -511,56 +523,200 @@ export function EditorWorkspace() {
                   <Button 
                     key={preset.name} 
                     variant="outline" 
-                    className={`w-full text-xs h-auto py-4 flex flex-col items-center gap-1 transition-colors rounded-xl ${
+                    className={cn(
+                      "w-full text-xs h-auto py-4 flex flex-col items-center gap-2 transition-all rounded-xl border-zinc-200 dark:border-white/10",
                       settings.preset === preset.name
-                        ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                        : 'border-zinc-200 dark:border-white/10 hover:border-primary hover:bg-primary/5'
-                    }`}
+                        ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary/20'
+                        : 'hover:border-primary/30 hover:bg-primary/5'
+                    )}
                     onClick={() => updateSettings({ width: preset.width, height: preset.height, preset: preset.name, focalX: 0, focalY: 0 })}
                   >
-                    <span className="font-semibold text-zinc-900 dark:text-white">{preset.name}</span>
-                    <span className="text-zinc-500">{preset.width}x{preset.height}</span>
+                    {/* Visual Ratio Preview */}
+                    <div className="w-12 h-10 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-md mb-1">
+                      <div 
+                        className={cn(
+                          "border-2 rounded-sm transition-all",
+                          settings.preset === preset.name ? "border-primary bg-primary/20" : "border-zinc-400"
+                        )}
+                        style={{ 
+                          width: preset.width >= preset.height ? '24px' : `${(preset.width / preset.height) * 24}px`,
+                          height: preset.height >= preset.width ? '20px' : `${(preset.height / preset.width) * 20}px`
+                        }}
+                      />
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="font-bold text-zinc-900 dark:text-white">{preset.name}</span>
+                      <span className="text-[10px] text-zinc-500 opacity-80">{preset.width} × {preset.height}</span>
+                    </div>
                   </Button>
                 ))}
               </div>
             </TabsContent>
 
-            <TabsContent value="resize" className="space-y-5 mt-6">
-              <div className="space-y-3">
-                <Label className="text-zinc-700 dark:text-zinc-300 font-medium">Width (px)</Label>
-                <Input 
-                  type="number" 
-                  placeholder="Auto" 
-                  value={settings.width || ''}
-                  onChange={(e) => updateSettings({ width: e.target.value ? Number(e.target.value) : null, preset: null, focalX: 0, focalY: 0 })}
-                  className="rounded-xl border-zinc-200 dark:border-white/10 focus-visible:ring-primary h-11"
-                />
-                <Slider
-                  value={[settings.width || 1080]}
-                  min={MIN_DIMENSION}
-                  max={MAX_DIMENSION}
-                  step={DIMENSION_STEP}
-                  onValueChange={(val) => updateSettings({ width: (val as number[])[0], preset: null })}
-                  className="py-2"
-                />
+            <TabsContent value="resize" className="space-y-6 mt-6">
+              <div className="grid grid-cols-2 gap-4 relative">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-zinc-700 dark:text-zinc-300 font-medium">Width (px)</Label>
+                    {settings.lockAspectRatio && <Lock className="w-3 h-3 text-primary opacity-50" />}
+                  </div>
+                  <Input 
+                    type="number" 
+                    placeholder="Auto" 
+                    value={settings.width || ''}
+                    onChange={(e) => {
+                      const val = e.target.value ? Number(e.target.value) : null;
+                      if (settings.lockAspectRatio && val) {
+                        const ratio = originalAspectRatio || 1;
+                        updateSettings({ 
+                          width: val, 
+                          height: Math.round(val / ratio),
+                          preset: null, 
+                          focalX: 0, 
+                          focalY: 0 
+                        });
+                      } else {
+                        updateSettings({ width: val, preset: null, focalX: 0, focalY: 0 });
+                      }
+                    }}
+                    className="rounded-xl border-zinc-200 dark:border-white/10 focus-visible:ring-primary h-11"
+                  />
+                </div>
+
+                {/* Aspect Ratio Lock Toggle */}
+                <div className="absolute left-1/2 top-[42px] -translate-x-1/2 z-10">
+                   <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => updateSettings({ lockAspectRatio: !settings.lockAspectRatio })}
+                    className={cn(
+                      "h-8 w-8 rounded-full border bg-white dark:bg-zinc-900 shadow-sm transition-all",
+                      settings.lockAspectRatio ? "text-primary border-primary/30" : "text-zinc-400 border-zinc-200"
+                    )}
+                    title={settings.lockAspectRatio ? "Unlock Aspect Ratio" : "Lock Aspect Ratio"}
+                   >
+                     {settings.lockAspectRatio ? <Link2 className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                   </Button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-zinc-700 dark:text-zinc-300 font-medium">Height (px)</Label>
+                    {settings.lockAspectRatio && <Lock className="w-3 h-3 text-primary opacity-50" />}
+                  </div>
+                  <Input 
+                    type="number" 
+                    placeholder="Auto" 
+                    value={settings.height || ''}
+                    onChange={(e) => {
+                      const val = e.target.value ? Number(e.target.value) : null;
+                      if (settings.lockAspectRatio && val) {
+                        const ratio = originalAspectRatio || 1;
+                        updateSettings({ 
+                          height: val, 
+                          width: Math.round(val * ratio),
+                          preset: null, 
+                          focalX: 0, 
+                          focalY: 0 
+                        });
+                      } else {
+                        updateSettings({ height: val, preset: null, focalX: 0, focalY: 0 });
+                      }
+                    }}
+                    className="rounded-xl border-zinc-200 dark:border-white/10 focus-visible:ring-primary h-11"
+                  />
+                </div>
               </div>
-              <div className="space-y-3">
-                <Label className="text-zinc-700 dark:text-zinc-300 font-medium">Height (px)</Label>
-                <Input 
-                  type="number" 
-                  placeholder="Auto" 
-                  value={settings.height || ''}
-                  onChange={(e) => updateSettings({ height: e.target.value ? Number(e.target.value) : null, preset: null, focalX: 0, focalY: 0 })}
-                  className="rounded-xl border-zinc-200 dark:border-white/10 focus-visible:ring-primary h-11"
-                />
-                <Slider
-                  value={[settings.height || 1080]}
-                  min={MIN_DIMENSION}
-                  max={MAX_DIMENSION}
-                  step={DIMENSION_STEP}
-                  onValueChange={(val) => updateSettings({ height: (val as number[])[0], preset: null })}
-                  className="py-2"
-                />
+
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1 h-9 rounded-xl border-zinc-200 text-xs gap-2"
+                  onClick={() => {
+                    updateSettings({ 
+                      width: settings.height, 
+                      height: settings.width,
+                      preset: null 
+                    });
+                  }}
+                >
+                  <RefreshCw className="h-3 w-3" /> Swap Dimensions
+                </Button>
+                <div className="h-4 w-[1px] bg-zinc-200" />
+                <div className="flex-1 flex gap-1">
+                  {[
+                    { label: '1:1', ratio: 1 },
+                    { label: '4:3', ratio: 4/3 },
+                    { label: '16:9', ratio: 16/9 },
+                    { label: 'Orig.', ratio: originalAspectRatio },
+                  ].map((r) => (
+                    <Button 
+                      key={r.label}
+                      variant="ghost" 
+                      size="sm" 
+                      className="px-2 h-9 text-[10px] text-zinc-500 hover:text-primary hover:bg-primary/5 rounded-lg"
+                      onClick={() => {
+                        if (r.ratio && settings.width) {
+                          updateSettings({ height: Math.round(settings.width / r.ratio), preset: null });
+                        } else if (r.ratio && settings.height) {
+                          updateSettings({ width: Math.round(settings.height * r.ratio), preset: null });
+                        } else if (r.ratio) {
+                          updateSettings({ width: 1080, height: Math.round(1080 / r.ratio), preset: null });
+                        }
+                      }}
+                    >
+                      {r.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                   <div className="flex justify-between items-center">
+                     <span className="text-xs font-medium text-zinc-500">Width Slider</span>
+                     <span className="text-[10px] text-zinc-400">{settings.width || 0}px</span>
+                   </div>
+                   <Slider
+                    value={[settings.width || 1080]}
+                    min={MIN_DIMENSION}
+                    max={MAX_DIMENSION}
+                    step={DIMENSION_STEP}
+                    onValueChange={(val) => {
+                      const v = (val as number[])[0];
+                      if (settings.lockAspectRatio) {
+                        const ratio = originalAspectRatio || 1;
+                        updateSettings({ width: v, height: Math.round(v / ratio), preset: null });
+                      } else {
+                        updateSettings({ width: v, preset: null });
+                      }
+                    }}
+                    className="py-2"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                     <span className="text-xs font-medium text-zinc-500">Height Slider</span>
+                     <span className="text-[10px] text-zinc-400">{settings.height || 0}px</span>
+                   </div>
+                  <Slider
+                    value={[settings.height || 1080]}
+                    min={MIN_DIMENSION}
+                    max={MAX_DIMENSION}
+                    step={DIMENSION_STEP}
+                    onValueChange={(val) => {
+                      const v = (val as number[])[0];
+                      if (settings.lockAspectRatio) {
+                        const ratio = originalAspectRatio || 1;
+                        updateSettings({ height: v, width: Math.round(v * ratio), preset: null });
+                      } else {
+                        updateSettings({ height: v, preset: null });
+                      }
+                    }}
+                    className="py-2"
+                  />
+                </div>
               </div>
               <p className="text-xs text-zinc-500 font-medium">Leave an input empty to maintain original aspect ratio.</p>
               <p className="text-xs text-zinc-500 font-medium">After first preview, slider changes auto-update output.</p>
@@ -594,36 +750,86 @@ export function EditorWorkspace() {
                   <p className="text-xs text-zinc-500 mt-3">
                     Move to choose which part of the image is kept in fixed-ratio output.
                   </p>
-                  <div className="space-y-4 mt-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-zinc-500">
-                        <span>Left</span>
-                        <span>Right</span>
+                  <div className="flex gap-6 items-start mt-4">
+                    {/* Visual Focal Point Selector */}
+                    <div 
+                      className="w-24 h-24 bg-zinc-100 dark:bg-zinc-800 rounded-xl border-2 border-zinc-200 dark:border-white/5 relative cursor-crosshair overflow-hidden shrink-0 shadow-inner"
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                        const y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+                        updateSettings({ focalX: Number(x.toFixed(2)), focalY: Number(y.toFixed(2)) });
+                      }}
+                    >
+                      {/* Guide Lines */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+                        <div className="w-full h-[1px] bg-zinc-400" />
+                        <div className="h-full w-[1px] bg-zinc-400 absolute" />
                       </div>
-                      <Slider
-                        value={[settings.focalX]}
-                        min={-1}
-                        max={1}
-                        step={0.05}
-                        onValueChange={(val) => updateSettings({ focalX: (val as number[])[0] })}
+                      {/* The Point */}
+                      <motion.div 
+                        animate={{ 
+                          left: `${((settings.focalX + 1) / 2) * 100}%`, 
+                          top: `${((settings.focalY + 1) / 2) * 100}%` 
+                        }}
+                        transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                        className="absolute w-3 h-3 bg-primary rounded-full -translate-x-1/2 -translate-y-1/2 shadow-lg border-2 border-white ring-4 ring-primary/20"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-zinc-500">
-                        <span>Up</span>
-                        <span>Down</span>
+
+                    <div className="flex-1 space-y-4">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] uppercase tracking-wider font-bold text-zinc-400">
+                          <span>Horizontal</span>
+                          <span className={cn(settings.focalX === 0 ? "text-zinc-300" : "text-primary")}>
+                            {settings.focalX > 0 ? "Right" : settings.focalX < 0 ? "Left" : "Center"}
+                          </span>
+                        </div>
+                        <Slider
+                          value={[settings.focalX]}
+                          min={-1}
+                          max={1}
+                          step={0.01}
+                          onValueChange={(val) => updateSettings({ focalX: (val as number[])[0] })}
+                          className="py-2"
+                        />
                       </div>
-                      <Slider
-                        value={[settings.focalY]}
-                        min={-1}
-                        max={1}
-                        step={0.05}
-                        onValueChange={(val) => updateSettings({ focalY: (val as number[])[0] })}
-                      />
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] uppercase tracking-wider font-bold text-zinc-400">
+                          <span>Vertical</span>
+                          <span className={cn(settings.focalY === 0 ? "text-zinc-300" : "text-primary")}>
+                            {settings.focalY > 0 ? "Bottom" : settings.focalY < 0 ? "Top" : "Center"}
+                          </span>
+                        </div>
+                        <Slider
+                          value={[settings.focalY]}
+                          min={-1}
+                          max={1}
+                          step={0.01}
+                          onValueChange={(val) => updateSettings({ focalY: (val as number[])[0] })}
+                          className="py-2"
+                        />
+                      </div>
                     </div>
                   </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full mt-4 h-8 text-[10px] text-zinc-400 hover:text-primary transition-colors rounded-lg"
+                    onClick={() => updateSettings({ focalX: 0, focalY: 0 })}
+                  >
+                    Reset Framing to Center
+                  </Button>
                 </div>
               )}
+
+              <Button 
+                className="w-full h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 font-bold text-xs mt-4"
+                onClick={handleProcess}
+                disabled={isProcessing}
+              >
+                {isProcessing ? 'Applying...' : 'Apply & Preview Changes'}
+              </Button>
             </TabsContent>
             
             <TabsContent value="compress" className="space-y-8 mt-6">
