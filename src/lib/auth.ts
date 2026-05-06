@@ -3,7 +3,9 @@ export interface AuthUser {
   name: string;
   email: string;
   role?: "admin" | "user";
+  authProvider?: "local" | "google";
 }
+
 
 const AUTH_STORAGE_KEY = "printpix_auth_user";
 const ACCESS_TOKEN_KEY = "printpix_access_token";

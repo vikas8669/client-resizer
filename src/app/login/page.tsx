@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { getDashboardPath, getStoredUser } from "@/lib/auth";
+import { getDashboardPath, getStoredUser, storeUser, setTokens } from "@/lib/auth";
+
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Eye, EyeOff } from "lucide-react";
+import { useGoogleLogin } from "@react-oauth/google";
+import apiClient from "@/api/api";
+import { ENDPOINTS } from "@/api/endpoints";
+import { useSearchParams } from "next/navigation";
+
+
+
 
 const GoogleIcon = () => (
             <svg className="h-4 w-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -25,26 +34,53 @@ const GoogleIcon = () => (
             </svg>
 );
 
-export default function LoginPage() {
+import { Suspense } from "react";
+
+function LoginContent() {
   const router = useRouter();
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [checkingAuth, setCheckingAuth] = useState(true);
   
   // Rate limit state
   const [isLimitDialogOpen, setIsLimitDialogOpen] = useState(false);
   const [limitMessage, setLimitMessage] = useState('');
 
+  const searchParams = useSearchParams();
+
   useEffect(() => {
+    // Check for tokens from Google OAuth Redirect
+    const accessToken = searchParams.get('accessToken');
+    const refreshToken = searchParams.get('refreshToken');
+    const userData = searchParams.get('user');
+
+    if (accessToken && refreshToken && userData) {
+      try {
+        const user = JSON.parse(decodeURIComponent(userData));
+        setTokens(accessToken, refreshToken);
+        storeUser(user);
+        
+        toast.success("Logged in with Google");
+        router.replace(getDashboardPath(user));
+        return;
+      } catch (e) {
+        console.error("Failed to parse Google login data", e);
+      }
+    }
+
+
     const user = getStoredUser();
     if (user) {
       router.replace(getDashboardPath(user));
       return;
     }
     setCheckingAuth(false);
-  }, [router]);
+  }, [router, searchParams]);
+
 
   const onEmailLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -68,6 +104,13 @@ export default function LoginPage() {
       setIsSubmitting(false);
     }
   };
+
+  const handleGoogleLogin = () => {
+    const backendUrl = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5000";
+    window.location.href = `${backendUrl}/api/auth/google`;
+  };
+
+
 
   if (checkingAuth) {
     return (
@@ -95,13 +138,13 @@ export default function LoginPage() {
               "The most intuitive workflow for modern print studios. We've cut our processing time by 40%."
             </p>
             <footer className="text-sm font-semibold text-blue-200 uppercase tracking-wider">
-              — Alex Rivera, Studio Lead
+              — Bom~ X, Studio Lead
             </footer>
           </blockquote>
         </div>
 
         <div className="relative z-10 text-sm text-blue-200">
-          © 2024 PrintPix Inc. All rights reserved.
+          © 2026 PrintPix Inc. All rights reserved.
         </div>
       </div>
 
@@ -116,7 +159,7 @@ export default function LoginPage() {
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               New to PrintPix?{" "}
               <Link href="/signup" className="font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400">
-                Create an account
+                <span className="underline">Create an account</span>
               </Link>
             </p>
           </div>
@@ -125,10 +168,11 @@ export default function LoginPage() {
           <div className="mt-8">
             <button
               type="button"
-              onClick={() => toast.info("Google login coming soon")}
+              onClick={() => handleGoogleLogin()}
               disabled={isSubmitting}
               className="flex w-full items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
+
               <GoogleIcon />
               Continue with Google
             </button>
@@ -161,17 +205,27 @@ export default function LoginPage() {
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Password</label>
                 <Link href="/forgot-password" className="text-xs font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
-                  Forgot?
+                  <span className="underline">Forgot Password?</span>
                 </Link>
               </div>
-              <input
-                type="password"
-                required
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-900 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:border-blue-400"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-900 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:border-blue-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+
             </div>
 
             <button
@@ -218,3 +272,12 @@ export default function LoginPage() {
     </main>
   );
 }
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-zinc-500">Loading...</div>}>
+      <LoginContent />
+    </Suspense>
+  );
+}
+

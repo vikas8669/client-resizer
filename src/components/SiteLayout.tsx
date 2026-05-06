@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Menu, X, UserCircle2, KeyRound, MailQuestion, LogOut } from "lucide-react";
+import { Menu, X, UserCircle2, KeyRound, MailQuestion, LogOut, Settings } from "lucide-react";
+
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -124,14 +125,6 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
                       <UserCircle2 className="h-4 w-4" />
                       Dashboard
                     </Link>
-                    <Link href="/change-password" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/10" onClick={() => setIsProfileMenuOpen(false)}>
-                      <KeyRound className="h-4 w-4" />
-                      Change Password
-                    </Link>
-                    <Link href="/forgot-password" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/10" onClick={() => setIsProfileMenuOpen(false)}>
-                      <MailQuestion className="h-4 w-4" />
-                      Forgot Password
-                    </Link>
                     <button
                       type="button"
                       onClick={handleLogout}
@@ -141,6 +134,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
                       <LogOut className="h-4 w-4" />
                       {logout.isPending ? "Logging out..." : "Logout"}
                     </button>
+
                   </div>
                 )}
               </div>

@@ -156,13 +156,20 @@ function AdminDashboardContent() {
                       }}
                     >
                       <DialogTrigger
-                        onClick={() => {
-                          setSelectedSuggestionId(item._id);
-                          setIsDialogOpen(true);
-                        }}
-                      >
-                        <Button size="sm">Reply</Button>
-                      </DialogTrigger>
+                        render={
+                          <Button 
+                            size="sm"
+                            onClick={() => {
+                              setSelectedSuggestionId(item._id);
+                              setIsDialogOpen(true);
+                            }}
+                          >
+                            Reply
+                          </Button>
+                        }
+                      />
+
+
 
                       <DialogContent>
                         <DialogHeader>

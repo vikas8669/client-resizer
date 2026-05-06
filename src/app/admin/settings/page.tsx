@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Settings, Shield, Bell, Database, Save } from 'lucide-react';
+import { Settings, Shield, Bell, Database, Save, Trash2 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 // import { Switch } from '@/components/ui/switch';
@@ -75,9 +76,48 @@ export default function AdminSettingsPage() {
             </div>
           </CardContent>
         </Card>
+
       </div>
 
+      <Card className="border-red-100 dark:border-red-900/30 bg-white dark:bg-zinc-900 shadow-sm mt-6">
+        <CardHeader>
+          <div className="flex items-center gap-2 text-red-600">
+            <Shield className="h-5 w-5" />
+            <CardTitle className="text-lg">Danger Zone</CardTitle>
+          </div>
+          <CardDescription className="dark:text-zinc-400">Personal account actions.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20">
+            <div>
+              <h4 className="text-sm font-semibold text-red-900 dark:text-red-400">Delete Admin Account</h4>
+              <p className="text-xs text-red-700 dark:text-red-500/80 mt-1">
+                You will lose all admin privileges and your account will be permanently removed.
+              </p>
+            </div>
+            <Button 
+              variant="destructive" 
+              onClick={async () => {
+                if (confirm('Are you SURE you want to delete your admin account? This cannot be undone.')) {
+                  try {
+                    await (await import('@/api/api')).default.delete((await import('@/api/endpoints')).ENDPOINTS.DELETE_ME);
+                    (await import('@/lib/auth')).logout();
+                    window.location.href = '/';
+                  } catch (e) {
+                    alert('Failed to delete account');
+                  }
+                }
+              }}
+              className="rounded-xl"
+            >
+              <Trash2 className="h-4 w-4 mr-2" /> Delete My Account
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex justify-end">
+
         <Button className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 px-8">
           <Save className="h-4 w-4 mr-2" /> Save Configuration
         </Button>

@@ -10,7 +10,14 @@ import { Eye, EyeOff, Check, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import * as z from "zod";
 import { useAuth } from '@/hooks/useAuth';
-import { getDashboardPath, getStoredUser } from '@/lib/auth';
+import { getDashboardPath, getStoredUser, storeUser, setTokens } from '@/lib/auth';
+
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import apiClient from '@/api/api';
+import { ENDPOINTS } from '@/api/endpoints';
+
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +42,7 @@ const signupSchema = z.object({
     .regex(/[0-9]/, "Must have a number"),
 });
 
-export default function SignupPage() {
+function SignupContent() {
   const router = useRouter();
   const { signup } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
@@ -46,14 +53,37 @@ export default function SignupPage() {
   const [isLimitDialogOpen, setIsLimitDialogOpen] = useState(false);
   const [limitMessage, setLimitMessage] = useState('');
 
+  const searchParams = useSearchParams();
+
   useEffect(() => {
+    // Check for tokens from Google OAuth Redirect
+    const accessToken = searchParams.get('accessToken');
+    const refreshToken = searchParams.get('refreshToken');
+    const userData = searchParams.get('user');
+
+    if (accessToken && refreshToken && userData) {
+      try {
+        const user = JSON.parse(decodeURIComponent(userData));
+        setTokens(accessToken, refreshToken);
+        storeUser(user);
+        
+        toast.success("Account ready!");
+        router.replace(getDashboardPath(user));
+        return;
+      } catch (e) {
+        console.error("Failed to parse Google login data", e);
+      }
+    }
+
+
     const user = getStoredUser();
     if (user) {
       router.replace(getDashboardPath(user));
       return;
     }
     setCheckingAuth(false);
-  }, [router]);
+  }, [router, searchParams]);
+
 
   const form = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
@@ -100,6 +130,13 @@ export default function SignupPage() {
       setIsSubmitting(false);
     }
   };
+
+  const handleGoogleLogin = () => {
+    const backendUrl = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5000";
+    window.location.href = `${backendUrl}/api/auth/google`;
+  };
+
+
 
   if (checkingAuth) {
     return (
@@ -149,9 +186,11 @@ export default function SignupPage() {
           <Button 
             variant="outline" 
             type="button"
-            onClick={() => toast.info("Google signup will be enabled after OAuth setup")}
+            disabled={isSubmitting}
+            onClick={() => handleGoogleLogin()}
             className="w-full h-10 rounded-lg text-xs font-semibold gap-2 border-zinc-200 dark:border-zinc-800 flex items-center justify-center"
           >
+
             <svg className="h-4 w-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -172,7 +211,7 @@ export default function SignupPage() {
                   <FormItem className="space-y-1">
                     <FormLabel className="text-xs">Full Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Alex Rivera" className="rounded-lg h-9 text-sm" {...field} />
+                      <Input placeholder="Bom~X" className="rounded-lg h-9 text-sm" {...field} />
                     </FormControl>
                     <FormMessage className="text-[10px]" />
                   </FormItem>
@@ -187,7 +226,7 @@ export default function SignupPage() {
                   <FormItem className="space-y-1">
                     <FormLabel className="text-xs">Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="alex@studio.com" className="rounded-lg h-9 text-sm" {...field} />
+                      <Input placeholder="bomx@studio.com" className="rounded-lg h-9 text-sm" {...field} />
                     </FormControl>
                     <FormMessage className="text-[10px]" />
                   </FormItem>
@@ -198,12 +237,13 @@ export default function SignupPage() {
               <FormField
                 control={form.control}
                 name="password"
+                
                 render={({ field }) => (
                   <FormItem className="space-y-1">
                     <FormLabel className="text-xs">Password</FormLabel>
                     <div className="relative">
                       <FormControl>
-                        <Input type={showPassword ? "text" : "password"} className="rounded-lg h-9 pr-9" {...field} />
+                        <Input type={showPassword ? "text" : "password"} placeholder="*******" className="rounded-lg h-9 pr-9" {...field} />
                       </FormControl>
                       <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2 text-zinc-400">
                         {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -280,5 +320,13 @@ export default function SignupPage() {
         </DialogContent>
       </Dialog>
     </main>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-zinc-500">Loading...</div>}>
+      <SignupContent />
+    </Suspense>
   );
 }
