@@ -1,5 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+"use client";
+
+import { useEffect, useState } from 'react';
+
+import { Card, CardContent, CardHeader, CardTitle, } from '@/components/ui/card';
 import { Users, UserPlus, Shield, Search, Trash2, Mail, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
