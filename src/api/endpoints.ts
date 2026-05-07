@@ -21,8 +21,11 @@ export const ENDPOINTS = {
 
   FEEDBACK: '/api/feedback',
   RESOLVED_FEEDBACK: '/api/feedback/resolved',
+  TOP_FEEDBACK: '/api/feedback/top',
+  AVERAGE_RATING: '/api/feedback/average',
   RESOLVE_FEEDBACK: (id: string) => `/api/feedback/${id}/resolve`,
   ANALYTICS: '/api/feedback/average',
+
   USERS: '/api/auth/users',
   DELETE_ME: '/api/auth/me',
   DELETE_USER: (id: string) => `/api/auth/users/${id}`,

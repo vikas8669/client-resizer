@@ -3,6 +3,8 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteLayout } from "@/components/SiteLayout";
+import { FloatingReview } from "@/components/FloatingReview";
+
 
 export const metadata: Metadata = {
   title: {
@@ -55,7 +57,9 @@ export default function RootLayout({
           <SiteLayout>
             {children}
           </SiteLayout>
+          <FloatingReview />
           <Toaster position="bottom-right" />
+
         </Providers>
       </body>
     </html>

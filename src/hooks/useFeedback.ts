@@ -32,9 +32,42 @@ export function useFeedback() {
         return [];
       }
     },
-    enabled: false,
     retry: 0,
   });
+
+  const topQuery = useQuery<Feedback[]>({
+    queryKey: ['feedback', 'top'],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get(ENDPOINTS.TOP_FEEDBACK);
+        return res.data?.data || [];
+      } catch (error: any) {
+        console.warn('Failed to fetch top feedback:', error.message);
+        return [];
+      }
+    },
+    retry: 0,
+  });
+
+  const averageQuery = useQuery<{ average: number; total: number }>({
+    queryKey: ['feedback', 'average'],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get(ENDPOINTS.AVERAGE_RATING);
+        const data = res.data?.data;
+        return {
+          average: data?.averageRating || 0,
+          total: data?.totalCount || 0,
+        };
+      } catch (error: any) {
+        console.warn('Failed to fetch average rating:', error.message);
+        return { average: 0, total: 0 };
+      }
+    },
+
+    retry: 0,
+  });
+
 
   const resolvedQuery = useQuery<Feedback[]>({
     queryKey: ['feedback', 'resolved'],
@@ -88,8 +121,10 @@ export function useFeedback() {
 
   return {
     feedback: query.data || [],
+    topFeedback: topQuery.data || [],
+    averageRating: averageQuery.data || { average: 0, total: 0 },
     resolvedFeedback: resolvedQuery.data || [],
-    isLoading: query.isLoading || resolvedQuery.isLoading,
+    isLoading: query.isLoading || resolvedQuery.isLoading || topQuery.isLoading || averageQuery.isLoading,
     isError: query.isError || resolvedQuery.isError,
     error: query.error || resolvedQuery.error,
     refetch: query.refetch,
@@ -97,4 +132,5 @@ export function useFeedback() {
     submitFeedback,
     resolveSuggestion,
   };
+
 }
