@@ -7,10 +7,10 @@ import { Github, Instagram, Linkedin, Facebook, ExternalLink } from "lucide-reac
 
 export function Footer() {
   const socialLinks = [
-    { icon: <Instagram size={18} />, href: "#" },
-    { icon: <Facebook size={18} />, href: "#" },
-    { icon: <Linkedin size={18} />, href: "#" },
-    { icon: <Github size={18} />, href: "#" },
+    { icon: <Instagram size={18} />, href: "https://www.instagram.com/___bomx/?hl=en" },
+    { icon: <Facebook size={18} />, href: "https://www.facebook.com/vikas.yadac.52" },
+    { icon: <Linkedin size={18} />, href: "https://www.linkedin.com/in/bomxxx/" },
+    { icon: <Github size={18} />, href: "https://github.com/vikas8669" },
   ];
 
   return (
@@ -86,6 +86,7 @@ export function Footer() {
                   <a
                     key={i}
                     href={social.href}
+                    target="_blank"
                     className="w-9 h-9 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-900 text-zinc-500 hover:text-white hover:bg-black dark:hover:bg-white dark:hover:text-black transition"
                   >
                     {social.icon}
