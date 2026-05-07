@@ -1196,7 +1196,17 @@ export function EditorWorkspace() {
             </TabsContent>
           </Tabs>
 
-          <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-white/10 space-y-4">
+          
+          <div className="mt-8 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 p-3 rounded-xl flex items-start gap-3">
+            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-500 mt-0.5 shrink-0" />
+            <div className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-400">
+              <span className="font-bold uppercase tracking-wider block mb-1">Important Instructions</span>
+              To ensure fair usage, free users are limited to <span className="font-bold text-amber-900 dark:text-amber-200 underline decoration-amber-500/50">20 photo edits per day</span> per IP address.
+            </div>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-zinc-100 dark:border-white/10 space-y-4">
+
             <Button 
               className={cn(
                 "w-full h-12 rounded-xl font-semibold transition-all",

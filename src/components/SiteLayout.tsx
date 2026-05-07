@@ -143,9 +143,11 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
                 Log in
               </Link>
             )}
-            <Button className="rounded-full px-6 py-6 shadow-lg hover:shadow-indigo-500/20 transition-all">
-              Get Started
-            </Button>
+            <Link href="/product">
+              <Button className="rounded-full px-6 py-6 shadow-lg hover:shadow-indigo-500/20 transition-all">
+                Get Started
+              </Button>
+            </Link>
           </div>
 
           {/* MOBILE TOGGLE */}
@@ -179,7 +181,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
               </div>
               <hr className="border-zinc-100 dark:border-white/5" />
               <div className="flex flex-col gap-4">
-                <Button className="w-full py-6 text-lg rounded-xl">Get Started</Button>
+                <Button className="w-full py-6 text-lg rounded-xl">Get Starte</Button>
                 {user ? (
                   <>
                     <div className="px-2 text-sm font-semibold text-zinc-600 dark:text-zinc-300">
