@@ -45,7 +45,7 @@ export default function PricingSection() {
               <li>✔ Priority Support</li>
             </ul>
             <button className="w-full py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
-              Upgrade
+               Coming Soon
             </button>
           </motion.div>
 
@@ -62,7 +62,7 @@ export default function PricingSection() {
               <li>✔ Future Updates</li>
             </ul>
             <button className="w-full py-2 rounded-lg bg-yellow-500 text-white hover:bg-yellow-600">
-              Try Now
+              Coming Soon
             </button>
           </motion.div>
         </div>
