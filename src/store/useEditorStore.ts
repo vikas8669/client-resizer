@@ -8,6 +8,7 @@ export interface EditorSettings {
   preset: string | null;
   focalX: number;
   focalY: number;
+  zoom: number;
   lockAspectRatio: boolean;
 }
 
@@ -43,6 +44,7 @@ const defaultSettings: EditorSettings = {
   preset: null,
   focalX: 0,
   focalY: 0,
+  zoom: 1,
   lockAspectRatio: true,
 };
 

@@ -34,6 +34,24 @@ function InfinityLight() {
 export default function Home() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "PrintPix",
+            "operatingSystem": "Web",
+            "applicationCategory": "DesignApplication",
+            "description": "AI-powered image processing and layout builder.",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "INR"
+            }
+          })
+        }}
+      />
       <InfinityLight />
 
       {/* HERO - Handled by internal component, but ensure it has responsive padding */}

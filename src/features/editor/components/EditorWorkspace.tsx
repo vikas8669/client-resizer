@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
 import { Dropzone } from './Dropzone';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
@@ -12,8 +12,8 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import apiClient from '@/api/api';
 import { ENDPOINTS, SERVER_BASE_URL } from '@/api/endpoints';
-import { Download, RefreshCw, LayoutTemplate, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Lock, Unlock, Link, Link2, Ratio, Maximize, Scissors } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Download, RefreshCw, LayoutTemplate, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Lock, Unlock, Link, Link2, Ratio, Maximize, Scissors, AlertCircle, ZoomIn, ZoomOut, FileType, CheckCircle2, UserCircle, PenTool, Image as ImageIcon, Train } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -23,14 +23,67 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from "@/components/ui/progress";
 
 
-const PRESETS = [
-  { name: 'Passport (2x2)', width: 600, height: 600 },
-  { name: 'PAN/Aadhaar', width: 413, height: 531 },
-  { name: 'Instagram SQ', width: 1080, height: 1080 },
-  { name: 'Twitter HDR', width: 1500, height: 500 },
+
+interface PresetItem {
+  name: string;
+  width: number;
+  height: number;
+  targetKB?: number;
+  desc?: string;
+  isCircular?: boolean;
+}
+
+
+interface PresetGroup {
+  group: string;
+  icon: React.ReactNode;
+  items: PresetItem[];
+}
+
+const GOVT_PRESETS: PresetGroup[] = [
+  { 
+    group: 'Passport & Identity', 
+    icon: <UserCircle className="w-4 h-4" />,
+    items: [
+      { name: 'SSC/UPSC Photo', width: 200, height: 230, targetKB: 50, desc: 'Common Govt Exam size' },
+      { name: 'Standard (3.5x4.5cm)', width: 413, height: 531, targetKB: 100, desc: 'Passport/Aadhaar' },
+      { name: 'IBPS Photo', width: 300, height: 300, targetKB: 50, desc: 'Banking Exams' },
+      { name: 'Digital (2x2 inch)', width: 600, height: 600, targetKB: 200, desc: 'US Visa / Digital ID' },
+    ]
+  },
+  { 
+    group: 'Signatures & Thumb', 
+    icon: <PenTool className="w-4 h-4" />,
+    items: [
+      { name: 'SSC Signature', width: 140, height: 60, targetKB: 20, desc: 'Small horizontal' },
+      { name: 'IBPS Signature', width: 300, height: 80, targetKB: 20, desc: 'Wide signature' },
+      { name: 'Thumb Impression', width: 140, height: 60, targetKB: 50, desc: 'Left/Right Thumb' },
+    ]
+  },
+  {
+    group: 'Railways (RRB)',
+    icon: <Train className="w-4 h-4" />,
+    items: [
+      { name: 'Railway Photo', width: 240, height: 320, targetKB: 50, desc: 'RRB/RRC Exam' },
+      { name: 'Railway Signature', width: 140, height: 60, targetKB: 40, desc: 'Black ink, running hand' },
+    ]
+  },
+  { 
+    group: 'Social & Web', 
+    icon: <ImageIcon className="w-4 h-4" />,
+    items: [
+      { name: 'Instagram Square', width: 1080, height: 1080, desc: '1:1 Ratio' },
+      { name: 'Twitter Header', width: 1500, height: 500, desc: '3:1 Ratio' },
+      { name: 'Social Media DP', width: 1000, height: 1000, desc: 'Circular DP / Profile', isCircular: true },
+    ]
+  }
+
 ];
+
 
 const PRINT_LAYOUTS = [
   { name: '8 Copies', count: 8 },
@@ -42,6 +95,21 @@ const PASSPORT_PRINT_GAP_MM = 2;
 const MIN_DIMENSION = 100;
 const MAX_DIMENSION = 3000;
 const DIMENSION_STEP = 10;
+
+// Helper to ensure values are numbers and not NaN
+const safeNum = (val: any, fallback: number = 0) => {
+  const n = Number(val);
+  return isNaN(n) ? fallback : n;
+};
+
+// Helper to format bytes
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
 
 export function EditorWorkspace() {
   const { 
@@ -60,17 +128,40 @@ export function EditorWorkspace() {
   const [currentImageId, setCurrentImageId] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<'process' | 'remove-bg' | 'print' | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [processPercentage, setProcessPercentage] = useState(0);
+
   
   const [isLimitDialogOpen, setIsLimitDialogOpen] = useState(false);
   const [limitDialogContent, setLimitDialogContent] = useState({ title: '', message: '' });
   const [originalAspectRatio, setOriginalAspectRatio] = useState<number | null>(null);
+  
+  // Target Size state
+  const [targetSizeValue, setTargetSizeValue] = useState<string>('');
+  const [targetSizeUnit, setTargetSizeUnit] = useState<'KB' | 'MB'>('KB');
+
+  // Track if changes are pending (settings changed but not processed)
+  const [lastProcessedSettings, setLastProcessedSettings] = useState<string>('');
+  
+  const hasPendingChanges = useMemo(() => {
+    const currentSettings = JSON.stringify({ 
+      w: settings.width, 
+      h: settings.height, 
+      fx: settings.focalX, 
+      fy: settings.focalY,
+      z: settings.zoom,
+      q: settings.quality,
+      f: settings.format
+    });
+    return currentSettings !== lastProcessedSettings && processedImageUrl !== null;
+  }, [settings, lastProcessedSettings, processedImageUrl]);
 
   // Load image dimensions to get aspect ratio
   useEffect(() => {
     if (originalImageUrl) {
       const img = new Image();
       img.onload = () => {
-        setOriginalAspectRatio(img.width / img.height);
+        const ratio = img.width / img.height;
+        setOriginalAspectRatio(isNaN(ratio) ? 1 : ratio);
       };
       img.src = originalImageUrl;
     }
@@ -84,7 +175,6 @@ export function EditorWorkspace() {
   }, []);
 
   const NUDGE_STEP = 0.2;
-  const autoApplyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const saved = window.sessionStorage.getItem('printLayoutUrl');
@@ -119,17 +209,31 @@ export function EditorWorkspace() {
 
   const nudgeFocus = (dx: number, dy: number) => {
     updateSettings({
-      focalX: Math.max(-1, Math.min(1, settings.focalX + dx)),
-      focalY: Math.max(-1, Math.min(1, settings.focalY + dy)),
+      focalX: Math.max(-1, Math.min(1, safeNum(settings.focalX, 0) + dx)),
+      focalY: Math.max(-1, Math.min(1, safeNum(settings.focalY, 0) + dy)),
     });
   };
 
+  const startProgress = () => {
+    setProcessPercentage(0);
+    return setInterval(() => {
+      setProcessPercentage(prev => {
+        if (prev >= 92) return prev;
+        return prev + (Math.random() * 12);
+      });
+    }, 350);
+  };
+
   const handleProcess = async () => {
+
     if (!originalFile) return;
     
     setActiveTask('process');
     setIsProcessing(true);
+    const interval = startProgress();
+
     try {
+
       let imageId = currentImageId;
 
       // Only upload if we don't have an ID yet
@@ -147,6 +251,9 @@ export function EditorWorkspace() {
         }
         setCurrentImageId(imageId);
       }
+
+      const multiplier = targetSizeUnit === 'MB' ? 1024 * 1024 : 1024;
+      const targetSizeBytes = targetSizeValue ? parseFloat(targetSizeValue) * multiplier : undefined;
       
       const processRes = await apiClient.post(ENDPOINTS.PROCESS, {
         imageId,
@@ -154,14 +261,32 @@ export function EditorWorkspace() {
         height: settings.height,
         focalX: settings.focalX,
         focalY: settings.focalY,
+        zoom: settings.zoom,
+        quality: settings.quality,
+        format: settings.format,
+        targetSize: targetSizeBytes
       });
       
       const outputPath = processRes.data?.data?.output;
-      const fullUrl = outputPath ? `${SERVER_BASE_URL}/${outputPath}` : null;
+      const fullUrl = outputPath ? `${SERVER_BASE_URL}${outputPath}` : null;
       if (!fullUrl) {
         throw new Error('Processing failed: missing output path');
       }
+      
+      setProcessPercentage(100);
+      // Update state
+
       setProcessedImageUrl(fullUrl);
+      setLastProcessedSettings(JSON.stringify({ 
+        w: settings.width, 
+        h: settings.height, 
+        fx: settings.focalX, 
+        fy: settings.focalY,
+        z: settings.zoom,
+        q: settings.quality,
+        f: settings.format
+      }));
+      
       toast.success('Image processed successfully!');
       
     } catch (error: any) {
@@ -178,17 +303,24 @@ export function EditorWorkspace() {
         toast.error(backendMessage);
       }
     } finally {
-      setIsProcessing(false);
-      setActiveTask(null);
+      clearInterval(interval);
+      setTimeout(() => {
+        setIsProcessing(false);
+        setActiveTask(null);
+      }, 300);
     }
   };
+
 
   const handlePrintLayout = async (layoutCount: number) => {
     if (!originalFile) return;
     
     setActiveTask('print');
     setIsProcessing(true);
+    const interval = startProgress();
+
     try {
+
       let imagePath = processedImageUrl ? extractServerPath(processedImageUrl) : null;
 
       if (!imagePath) {
@@ -215,7 +347,9 @@ export function EditorWorkspace() {
       if (!fullUrl) {
         throw new Error('Print generation failed: missing download URL');
       }
+      setProcessPercentage(100);
       setPrintLayoutUrl(fullUrl);
+
       toast.success(`A4 layout for ${layoutCount} passport-size copies generated!`);
 
     } catch (error: any) {
@@ -231,17 +365,24 @@ export function EditorWorkspace() {
         toast.error('Failed to generate print layout');
       }
     } finally {
-      setIsProcessing(false);
-      setActiveTask(null);
+      clearInterval(interval);
+      setTimeout(() => {
+        setIsProcessing(false);
+        setActiveTask(null);
+      }, 300);
     }
   };
+
 
   const handleRemoveBackground = async () => {
     if (!originalFile) return;
 
     setActiveTask('remove-bg');
     setIsProcessing(true);
+    const interval = startProgress();
+
     try {
+
       let imageId = currentImageId;
 
       if (!imageId) {
@@ -261,12 +402,13 @@ export function EditorWorkspace() {
 
       const removeBgRes = await apiClient.post(ENDPOINTS.REMOVE_BG, { imageId });
       const outputPath = removeBgRes.data?.data?.output;
-      const fullUrl = outputPath ? `${SERVER_BASE_URL}/${outputPath}` : null;
+      const fullUrl = outputPath ? `${SERVER_BASE_URL}${outputPath}` : null;
 
       if (!fullUrl) {
         throw new Error('Remove background failed: missing output path');
       }
 
+      setProcessPercentage(100);
       setProcessedImageUrl(fullUrl);
       toast.success('Background removed. You can print this image now.');
     } catch (error: any) {
@@ -283,14 +425,20 @@ export function EditorWorkspace() {
         toast.error(backendMessage);
       }
     } finally {
-      setIsProcessing(false);
-      setActiveTask(null);
+      clearInterval(interval);
+      setTimeout(() => {
+        setIsProcessing(false);
+        setActiveTask(null);
+      }, 300);
     }
   };
+
 
   const handleStartOver = () => {
     setPrintLayoutUrl(null);
     setCurrentImageId(null);
+    setLastProcessedSettings('');
+    setTargetSizeValue('');
     window.sessionStorage.removeItem('printLayoutUrl');
     reset();
   };
@@ -299,9 +447,10 @@ export function EditorWorkspace() {
     if (!processedImageUrl) return;
 
     try {
+      // Try to fetch first (cleaner, allows naming)
       const response = await fetch(processedImageUrl);
       if (!response.ok) {
-        throw new Error('Failed to fetch processed image');
+        throw new Error('Server returned error status');
       }
 
       const blob = await response.blob();
@@ -317,34 +466,40 @@ export function EditorWorkspace() {
       link.remove();
       window.URL.revokeObjectURL(objectUrl);
     } catch (error) {
-      console.error('Single image download failed', error);
-      toast.error('Failed to download image');
+      console.warn('Single image fetch failed, falling back to direct download', error);
+      
+      // Fallback: Direct download using the server's attachment header
+      const downloadUrl = `${processedImageUrl}${processedImageUrl.includes('?') ? '&' : '?'}download=true`;
+      window.open(downloadUrl, '_blank');
+      
+      toast.info('Download started in new tab');
     }
   };
 
-  useEffect(() => {
-    if (!originalFile || isProcessing) {
+  const handleTargetSizeChange = (val: string) => {
+    if (!originalFile) return;
+    
+    const numVal = parseFloat(val);
+    if (isNaN(numVal)) {
+      setTargetSizeValue(val);
       return;
     }
 
-    if (!settings.width && !settings.height) {
+    const multiplier = targetSizeUnit === 'MB' ? 1024 * 1024 : 1024;
+    const sizeInBytes = numVal * multiplier;
+
+    if (sizeInBytes > originalFile.size) {
+      toast.warning(`Target size cannot exceed original size (${formatFileSize(originalFile.size)})`);
       return;
     }
 
-    if (autoApplyTimeoutRef.current) {
-      clearTimeout(autoApplyTimeoutRef.current);
-    }
-
-    autoApplyTimeoutRef.current = setTimeout(() => {
-      handleProcess();
-    }, 450);
-
-    return () => {
-      if (autoApplyTimeoutRef.current) {
-        clearTimeout(autoApplyTimeoutRef.current);
-      }
-    };
-  }, [originalFile, settings.width, settings.height, settings.focalX, settings.focalY]);
+    setTargetSizeValue(val);
+    
+    // Improved Heuristic: JPEG quality is not linear to file size.
+    const ratio = (sizeInBytes / originalFile.size);
+    const newQuality = Math.round(Math.max(20, Math.min(100, Math.pow(ratio, 0.45) * 100)));
+    updateSettings({ quality: newQuality });
+  };
 
   if (!originalImageUrl) {
     return (
@@ -412,6 +567,20 @@ export function EditorWorkspace() {
     );
   }
 
+  // Calculate client-side visual guide style
+  const visualGuideStyle = {
+    objectFit: 'cover' as const,
+    objectPosition: `${((safeNum(settings.focalX, 0) + 1) / 2) * 100}% ${((safeNum(settings.focalY, 0) + 1) / 2) * 100}%`,
+    width: '100%',
+    height: '100%',
+    transform: `scale(${safeNum(settings.zoom, 1)})`,
+    transformOrigin: `${((safeNum(settings.focalX, 0) + 1) / 2) * 100}% ${((safeNum(settings.focalY, 0) + 1) / 2) * 100}%`,
+    transition: 'transform 0.2s ease-out, object-position 0.2s ease-out',
+  };
+
+  
+  const containerAspectRatio = settings.width && settings.height ? settings.width / settings.height : originalAspectRatio || 1;
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -421,28 +590,68 @@ export function EditorWorkspace() {
       {/* Canvas Area */}
       <div className="lg:col-span-8 flex flex-col gap-6">
         <div className="bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden flex items-center justify-center min-h-[300px] sm:min-h-[400px] lg:min-h-[500px] relative shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(255,255,255,0.04)]">
-          {processedImageUrl ? (
+          {processedImageUrl && !hasPendingChanges ? (
             <BeforeAfterSlider beforeImage={originalImageUrl} afterImage={processedImageUrl} />
           ) : (
-            <img 
-              src={originalImageUrl} 
-              alt="Preview" 
-              className="max-w-full max-h-[600px] object-contain p-4"
-            />
-          )}
-          {isProcessing && (
-            <div className="absolute inset-0 bg-white/60 dark:bg-zinc-950/60 backdrop-blur-md flex items-center justify-center z-50 transition-all">
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-                <p className="text-sm font-semibold text-zinc-900 dark:text-white animate-pulse">Processing Image...</p>
-                <p className="text-xs text-zinc-600 dark:text-zinc-300">
-                  {activeTask === 'remove-bg' && 'Removing background...'}
-                  {activeTask === 'print' && 'Generating print-ready PDF...'}
-                  {activeTask === 'process' && 'Applying resize and quality settings...'}
-                </p>
-              </div>
+            <div className="w-full h-full flex items-center justify-center p-8 bg-zinc-50 dark:bg-zinc-900/50">
+               <div 
+                 className="relative shadow-2xl border-4 border-white dark:border-zinc-800 transition-all duration-300 ease-out overflow-hidden"
+                 style={{ 
+                   aspectRatio: containerAspectRatio,
+                   maxWidth: '100%',
+                   maxHeight: '500px'
+                 }}
+               >
+                 <img 
+                    src={originalImageUrl} 
+                    alt="Visual Guide" 
+                    style={visualGuideStyle}
+                    className="rounded-sm"
+                 />
+                 {/* Visual overlay to show it's a live guide */}
+                 <div className={cn("absolute inset-0 pointer-events-none z-10", settings.preset === 'Social Media DP' ? "border-[40px] border-black/40 rounded-full" : "border-2 border-primary/50")}>
+                    <div className="absolute top-2 left-2 bg-primary/90 text-white text-[10px] px-2 py-0.5 rounded font-bold flex items-center gap-1">
+                       <Scissors className="w-3 h-3" /> {settings.preset === 'Social Media DP' ? 'Circular Crop' : 'Visual Guide'}
+                    </div>
+                 </div>
+               </div>
+
             </div>
           )}
+          
+          <AnimatePresence>
+            {isProcessing && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-white/80 dark:bg-zinc-950/90 backdrop-blur-sm flex items-center justify-center z-50"
+              >
+                <div className="flex flex-col items-center gap-6 w-full max-w-[280px]">
+                  <div className="relative w-20 h-20">
+                    <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8" className="text-zinc-100 dark:text-zinc-800" />
+                      <motion.circle 
+                        cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8" className="text-primary" 
+                        strokeDasharray="282.7" 
+                        initial={{ strokeDashoffset: 282.7 }} 
+                        animate={{ strokeDashoffset: 282.7 - (282.7 * processPercentage) / 100 }} 
+                        transition={{ type: "spring", damping: 20, stiffness: 50 }}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center font-bold text-lg">{Math.round(processPercentage)}%</div>
+                  </div>
+                  <div className="w-full space-y-2">
+                    <Progress value={processPercentage} className="h-1.5" />
+                    <p className="text-xs text-center font-medium text-zinc-500 uppercase tracking-widest animate-pulse">
+                       {activeTask === 'remove-bg' ? 'Removing Background' : activeTask === 'print' ? 'Generating Print PDF' : 'Optimizing Image'}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
         </div>
 
         {printLayoutUrl && (
@@ -517,40 +726,69 @@ export function EditorWorkspace() {
               <TabsTrigger value="compress" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Compress</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="presets" className="space-y-4 mt-6">
-              <div className="grid grid-cols-2 gap-3">
-                {PRESETS.map((preset) => (
-                  <Button 
-                    key={preset.name} 
-                    variant="outline" 
-                    className={cn(
-                      "w-full text-xs h-auto py-4 flex flex-col items-center gap-2 transition-all rounded-xl border-zinc-200 dark:border-white/10",
-                      settings.preset === preset.name
-                        ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary/20'
-                        : 'hover:border-primary/30 hover:bg-primary/5'
-                    )}
-                    onClick={() => updateSettings({ width: preset.width, height: preset.height, preset: preset.name, focalX: 0, focalY: 0 })}
-                  >
-                    {/* Visual Ratio Preview */}
-                    <div className="w-12 h-10 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-md mb-1">
-                      <div 
-                        className={cn(
-                          "border-2 rounded-sm transition-all",
-                          settings.preset === preset.name ? "border-primary bg-primary/20" : "border-zinc-400"
-                        )}
-                        style={{ 
-                          width: preset.width >= preset.height ? '24px' : `${(preset.width / preset.height) * 24}px`,
-                          height: preset.height >= preset.width ? '20px' : `${(preset.height / preset.width) * 20}px`
-                        }}
-                      />
+            <TabsContent value="presets" className="space-y-6 mt-6">
+               <ScrollArea className="h-[400px] pr-4">
+                  {GOVT_PRESETS.map((group) => (
+                    <div key={group.group} className="mb-8 last:mb-0">
+                      <div className="flex items-center gap-2 mb-4">
+                         <div className="p-1.5 bg-primary/10 text-primary rounded-lg">
+                           {group.icon}
+                         </div>
+                         <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">{group.group}</h4>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2.5">
+                        {group.items.map((p) => (
+                          <Button 
+                            key={p.name}
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start h-auto p-4 rounded-xl border-zinc-200 dark:border-white/10 transition-all text-left flex flex-col items-start gap-1",
+                              settings.preset === p.name ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:border-primary/30 hover:bg-zinc-50"
+                            )}
+                            onClick={() => {
+                              updateSettings({ 
+                                width: p.width, 
+                                height: p.height, 
+                                preset: p.name, 
+                                focalX: 0, 
+                                focalY: 0, 
+                                zoom: 1,
+                                format: p.isCircular ? 'png' : 'jpeg',
+                                quality: p.isCircular ? 100 : settings.quality
+                              });
+                              if (p.targetKB) {
+                                setTargetSizeValue(p.targetKB.toString());
+                                setTargetSizeUnit('KB');
+                                handleTargetSizeChange(p.targetKB.toString());
+                              } else {
+                                setTargetSizeValue('');
+                              }
+                            }}
+
+                          >
+                            <div className="flex justify-between w-full items-center">
+                               <span className="font-bold text-zinc-900 dark:text-white text-sm">{p.name}</span>
+                               <span className="text-[10px] bg-zinc-100 dark:bg-white/10 px-2 py-0.5 rounded-full font-mono">
+                                 {p.width}×{p.height}
+                               </span>
+                            </div>
+                            <div className="flex justify-between w-full items-end mt-1">
+                               <span className="text-[10px] text-zinc-500 leading-none">{p.desc}</span>
+                               {p.targetKB && (
+                                 <span className="text-[10px] font-bold text-primary leading-none">Max {p.targetKB} KB</span>
+                               )}
+                            </div>
+                            {settings.preset === p.name && (
+                              <motion.div layoutId="check" className="absolute right-3 top-3">
+                                <CheckCircle2 className="w-4 h-4 text-primary" />
+                              </motion.div>
+                            )}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex flex-col items-center">
-                      <span className="font-bold text-zinc-900 dark:text-white">{preset.name}</span>
-                      <span className="text-[10px] text-zinc-500 opacity-80">{preset.width} × {preset.height}</span>
-                    </div>
-                  </Button>
-                ))}
-              </div>
+                  ))}
+               </ScrollArea>
             </TabsContent>
 
             <TabsContent value="resize" className="space-y-6 mt-6">
@@ -571,12 +809,10 @@ export function EditorWorkspace() {
                         updateSettings({ 
                           width: val, 
                           height: Math.round(val / ratio),
-                          preset: null, 
-                          focalX: 0, 
-                          focalY: 0 
+                          preset: null 
                         });
                       } else {
-                        updateSettings({ width: val, preset: null, focalX: 0, focalY: 0 });
+                        updateSettings({ width: val, preset: null });
                       }
                     }}
                     className="rounded-xl border-zinc-200 dark:border-white/10 focus-visible:ring-primary h-11"
@@ -615,12 +851,10 @@ export function EditorWorkspace() {
                         updateSettings({ 
                           height: val, 
                           width: Math.round(val * ratio),
-                          preset: null, 
-                          focalX: 0, 
-                          focalY: 0 
+                          preset: null 
                         });
                       } else {
-                        updateSettings({ height: val, preset: null, focalX: 0, focalY: 0 });
+                        updateSettings({ height: val, preset: null });
                       }
                     }}
                     className="rounded-xl border-zinc-200 dark:border-white/10 focus-visible:ring-primary h-11"
@@ -657,12 +891,13 @@ export function EditorWorkspace() {
                       size="sm" 
                       className="px-2 h-9 text-[10px] text-zinc-500 hover:text-primary hover:bg-primary/5 rounded-lg"
                       onClick={() => {
-                        if (r.ratio && settings.width) {
-                          updateSettings({ height: Math.round(settings.width / r.ratio), preset: null });
-                        } else if (r.ratio && settings.height) {
-                          updateSettings({ width: Math.round(settings.height * r.ratio), preset: null });
-                        } else if (r.ratio) {
-                          updateSettings({ width: 1080, height: Math.round(1080 / r.ratio), preset: null });
+                        const ratio = r.ratio || 1;
+                        if (settings.width) {
+                          updateSettings({ height: Math.round(settings.width / ratio), preset: null });
+                        } else if (settings.height) {
+                          updateSettings({ width: Math.round(settings.height * ratio), preset: null });
+                        } else {
+                          updateSettings({ width: 1080, height: Math.round(1080 / ratio), preset: null });
                         }
                       }}
                     >
@@ -679,7 +914,7 @@ export function EditorWorkspace() {
                      <span className="text-[10px] text-zinc-400">{settings.width || 0}px</span>
                    </div>
                    <Slider
-                    value={[settings.width || 1080]}
+                    value={[safeNum(settings.width, 1080)]}
                     min={MIN_DIMENSION}
                     max={MAX_DIMENSION}
                     step={DIMENSION_STEP}
@@ -701,7 +936,7 @@ export function EditorWorkspace() {
                      <span className="text-[10px] text-zinc-400">{settings.height || 0}px</span>
                    </div>
                   <Slider
-                    value={[settings.height || 1080]}
+                    value={[safeNum(settings.height, 1080)]}
                     min={MIN_DIMENSION}
                     max={MAX_DIMENSION}
                     step={DIMENSION_STEP}
@@ -718,8 +953,39 @@ export function EditorWorkspace() {
                   />
                 </div>
               </div>
-              <p className="text-xs text-zinc-500 font-medium">Leave an input empty to maintain original aspect ratio.</p>
-              <p className="text-xs text-zinc-500 font-medium">After first preview, slider changes auto-update output.</p>
+              
+              <div className="pt-4 border-t border-zinc-100 dark:border-white/5 space-y-4">
+                 <div className="flex justify-between items-center">
+                   <Label className="text-zinc-700 dark:text-zinc-300 font-medium">Zoom Factor</Label>
+                   <span className="text-xs font-bold text-primary">{(safeNum(settings.zoom, 1) * 100).toFixed(0)}%</span>
+                 </div>
+                 <div className="flex items-center gap-4">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-800"
+                      onClick={() => updateSettings({ zoom: Math.max(1, safeNum(settings.zoom, 1) - 0.1) })}
+                    >
+                      <ZoomOut className="w-4 h-4" />
+                    </Button>
+                    <Slider 
+                      value={[safeNum(settings.zoom, 1)]} 
+                      min={1} 
+                      max={3} 
+                      step={0.01} 
+                      onValueChange={(val) => updateSettings({ zoom: (val as number[])[0] })}
+                      className="flex-1"
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-800"
+                      onClick={() => updateSettings({ zoom: Math.min(3, safeNum(settings.zoom, 1) + 0.1) })}
+                    >
+                      <ZoomIn className="w-4 h-4" />
+                    </Button>
+                 </div>
+              </div>
 
               {settings.width && settings.height && (
                 <div className="pt-2">
@@ -769,8 +1035,8 @@ export function EditorWorkspace() {
                       {/* The Point */}
                       <motion.div 
                         animate={{ 
-                          left: `${((settings.focalX + 1) / 2) * 100}%`, 
-                          top: `${((settings.focalY + 1) / 2) * 100}%` 
+                          left: `${((safeNum(settings.focalX, 0) + 1) / 2) * 100}%`, 
+                          top: `${((safeNum(settings.focalY, 0) + 1) / 2) * 100}%` 
                         }}
                         transition={{ type: "spring", damping: 20, stiffness: 300 }}
                         className="absolute w-3 h-3 bg-primary rounded-full -translate-x-1/2 -translate-y-1/2 shadow-lg border-2 border-white ring-4 ring-primary/20"
@@ -781,12 +1047,12 @@ export function EditorWorkspace() {
                       <div className="space-y-1">
                         <div className="flex justify-between text-[10px] uppercase tracking-wider font-bold text-zinc-400">
                           <span>Horizontal</span>
-                          <span className={cn(settings.focalX === 0 ? "text-zinc-300" : "text-primary")}>
-                            {settings.focalX > 0 ? "Right" : settings.focalX < 0 ? "Left" : "Center"}
+                          <span className={cn(safeNum(settings.focalX, 0) === 0 ? "text-zinc-300" : "text-primary")}>
+                            {safeNum(settings.focalX, 0) > 0 ? "Right" : safeNum(settings.focalX, 0) < 0 ? "Left" : "Center"}
                           </span>
                         </div>
                         <Slider
-                          value={[settings.focalX]}
+                          value={[safeNum(settings.focalX, 0)]}
                           min={-1}
                           max={1}
                           step={0.01}
@@ -797,12 +1063,12 @@ export function EditorWorkspace() {
                       <div className="space-y-1">
                         <div className="flex justify-between text-[10px] uppercase tracking-wider font-bold text-zinc-400">
                           <span>Vertical</span>
-                          <span className={cn(settings.focalY === 0 ? "text-zinc-300" : "text-primary")}>
-                            {settings.focalY > 0 ? "Bottom" : settings.focalY < 0 ? "Top" : "Center"}
+                          <span className={cn(safeNum(settings.focalY, 0) === 0 ? "text-zinc-300" : "text-primary")}>
+                            {safeNum(settings.focalY, 0) > 0 ? "Bottom" : safeNum(settings.focalY, 0) < 0 ? "Top" : "Center"}
                           </span>
                         </div>
                         <Slider
-                          value={[settings.focalY]}
+                          value={[safeNum(settings.focalY, 0)]}
                           min={-1}
                           max={1}
                           step={0.01}
@@ -816,34 +1082,82 @@ export function EditorWorkspace() {
                     variant="ghost" 
                     size="sm" 
                     className="w-full mt-4 h-8 text-[10px] text-zinc-400 hover:text-primary transition-colors rounded-lg"
-                    onClick={() => updateSettings({ focalX: 0, focalY: 0 })}
+                    onClick={() => updateSettings({ focalX: 0, focalY: 0, zoom: 1 })}
                   >
-                    Reset Framing to Center
+                    Reset Framing & Zoom
                   </Button>
                 </div>
               )}
 
               <Button 
-                className="w-full h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 font-bold text-xs mt-4"
+                className={cn(
+                  "w-full h-10 rounded-xl font-bold text-xs mt-4 transition-all",
+                  hasPendingChanges 
+                    ? "bg-primary text-white shadow-lg ring-2 ring-primary/20 animate-pulse" 
+                    : "bg-primary/10 text-primary border border-primary/20"
+                )}
                 onClick={handleProcess}
                 disabled={isProcessing}
               >
-                {isProcessing ? 'Applying...' : 'Apply & Preview Changes'}
+                {isProcessing ? 'Applying...' : hasPendingChanges ? 'Update Preview' : 'Preview Applied'}
               </Button>
             </TabsContent>
             
-            <TabsContent value="compress" className="space-y-8 mt-6">
-              <div className="space-y-5">
+            <TabsContent value="compress" className="space-y-6 mt-6">
+               <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-zinc-200 dark:border-white/5 mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs text-zinc-500 font-medium">Original File Size:</span>
+                    <span className="text-xs font-bold text-zinc-900 dark:text-white">
+                      {originalFile ? formatFileSize(originalFile.size) : '0 Bytes'}
+                    </span>
+                  </div>
+               </div>
+
+               <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-zinc-700 dark:text-zinc-300 font-medium">Target Max Size</Label>
+                    <div className="flex bg-zinc-100 dark:bg-white/10 p-1 rounded-lg">
+                       <button 
+                         className={cn("px-2 py-0.5 text-[10px] rounded-md transition-all", targetSizeUnit === 'KB' ? "bg-white dark:bg-zinc-800 shadow-sm font-bold" : "text-zinc-500")}
+                         onClick={() => setTargetSizeUnit('KB')}
+                       >KB</button>
+                       <button 
+                         className={cn("px-2 py-0.5 text-[10px] rounded-md transition-all", targetSizeUnit === 'MB' ? "bg-white dark:bg-zinc-800 shadow-sm font-bold" : "text-zinc-500")}
+                         onClick={() => setTargetSizeUnit('MB')}
+                       >MB</button>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <Input 
+                      type="number" 
+                      placeholder={`Enter size in ${targetSizeUnit}`}
+                      value={targetSizeValue}
+                      onChange={(e) => handleTargetSizeChange(e.target.value)}
+                      className="rounded-xl border-zinc-200 dark:border-white/10 h-11 pr-12"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">
+                      {targetSizeUnit}
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-zinc-500">Entering a target size will automatically adjust the quality slider to match.</p>
+               </div>
+
+              <div className="space-y-5 pt-4">
                 <div className="flex justify-between items-center">
                   <Label className="text-zinc-700 dark:text-zinc-300 font-medium">Compression Quality</Label>
-                  <span className="text-sm font-bold bg-primary/10 text-primary px-2 py-1 rounded-md">{settings.quality}%</span>
+                  <span className="text-sm font-bold bg-primary/10 text-primary px-2 py-1 rounded-md">{safeNum(settings.quality, 80)}%</span>
                 </div>
                 <Slider 
-                  value={[settings.quality]} 
+                  value={[safeNum(settings.quality, 80)]} 
                   min={10} 
                   max={100} 
                   step={1}
-                  onValueChange={(val) => updateSettings({ quality: typeof val === 'number' ? val : (val as number[])[0] })}
+                  onValueChange={(val) => {
+                    const q = (val as number[])[0];
+                    updateSettings({ quality: q });
+                    // Clear target size if slider is moved manually to avoid confusion
+                    if (targetSizeValue) setTargetSizeValue('');
+                  }}
                   className="py-2"
                 />
               </div>
@@ -853,18 +1167,30 @@ export function EditorWorkspace() {
                 <div className="flex gap-3">
                   <Button 
                     variant={settings.format === 'jpeg' ? 'default' : 'outline'} 
-                    className={`flex-1 rounded-xl h-11 ${settings.format === 'jpeg' ? 'bg-zinc-900 text-white shadow-md' : 'border-zinc-200'}`}
+                    className={cn(
+                      "flex-1 rounded-xl h-11 transition-all",
+                      settings.format === 'jpeg' 
+                        ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-md" 
+                        : "border-zinc-200 dark:border-white/10 dark:text-zinc-400"
+                    )}
                     onClick={() => updateSettings({ format: 'jpeg' })}
                   >
                     JPG
                   </Button>
+
                   <Button 
                     variant={settings.format === 'png' ? 'default' : 'outline'} 
-                    className={`flex-1 rounded-xl h-11 ${settings.format === 'png' ? 'bg-zinc-900 text-white shadow-md' : 'border-zinc-200'}`}
+                    className={cn(
+                      "flex-1 rounded-xl h-11 transition-all",
+                      settings.format === 'png' 
+                        ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-md" 
+                        : "border-zinc-200 dark:border-white/10 dark:text-zinc-400"
+                    )}
                     onClick={() => updateSettings({ format: 'png' })}
                   >
                     PNG
                   </Button>
+
                 </div>
               </div>
             </TabsContent>
@@ -872,31 +1198,42 @@ export function EditorWorkspace() {
 
           <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-white/10 space-y-4">
             <Button 
-              className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold shadow-[0_4px_14px_0_rgba(34,98,199,0.39)] transition-all hover:shadow-[0_6px_20px_rgba(34,98,199,0.23)] hover:-translate-y-0.5" 
+              className={cn(
+                "w-full h-12 rounded-xl font-semibold transition-all",
+                hasPendingChanges 
+                  ? "bg-primary text-white shadow-[0_4px_14px_0_rgba(34,98,199,0.39)] hover:shadow-[0_6px_20_rgba(34,98,199,0.23)] hover:-translate-y-0.5" 
+                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border border-zinc-200 dark:border-white/10"
+              )}
               onClick={handleProcess} 
               disabled={isProcessing}
             >
-              {isProcessing ? 'Processing...' : 'Apply Changes & Preview'}
+              {isProcessing ? 'Processing...' : hasPendingChanges ? 'Apply Changes & Preview' : 'Settings Applied'}
             </Button>
+
 
             <Button
               variant="outline"
-              className="w-full h-12 rounded-xl font-semibold border-zinc-200 hover:bg-zinc-50 text-zinc-900 transition-colors"
+              className="w-full h-12 rounded-xl font-semibold border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 text-zinc-900 dark:text-white transition-colors"
               onClick={handleRemoveBackground}
               disabled={isProcessing}
             >
               Remove Background
             </Button>
+
             
             {processedImageUrl && (
               <button
                 type="button"
                 onClick={handleSingleDownload}
-                className={buttonVariants({ variant: "outline", className: "w-full h-12 rounded-xl font-semibold border-zinc-200 hover:bg-zinc-50 text-zinc-900 transition-colors" })}
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "w-full h-12 rounded-xl font-semibold border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 text-zinc-900 dark:text-white transition-colors"
+                )}
               >
                 <Download className="w-4 h-4 mr-2" /> Download Single Image
               </button>
             )}
+
           </div>
 
           <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-white/10">
@@ -907,7 +1244,7 @@ export function EditorWorkspace() {
                 <Button 
                   key={layout.count} 
                   variant="outline" 
-                  className="rounded-xl border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50"
+                  className="rounded-xl border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:bg-white/5 text-zinc-900 dark:text-white"
                   onClick={() => handlePrintLayout(layout.count)}
                   disabled={isProcessing}
                 >
@@ -915,14 +1252,16 @@ export function EditorWorkspace() {
                 </Button>
               ))}
             </div>
+
           </div>
         </div>
 
         <div className="mt-auto p-6 bg-zinc-50/50 dark:bg-white/5 border-t border-zinc-100 dark:border-white/5">
-          <Button variant="ghost" className="w-full text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50 rounded-xl" onClick={handleStartOver}>
+          <Button variant="ghost" className="w-full text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-white/5 rounded-xl transition-all" onClick={handleStartOver}>
             <RefreshCw className="w-4 h-4 mr-2" /> Start Over with New Image
           </Button>
         </div>
+
       </div>
       {/* Rate Limit Dialog */}
       <Dialog open={isLimitDialogOpen} onOpenChange={setIsLimitDialogOpen}>

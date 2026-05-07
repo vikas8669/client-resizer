@@ -87,7 +87,8 @@ export default function ProductPage() {
           </div>
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-zinc-900 sm:text-5xl">How To Use PrintPix Product</h1>
           <p className="mt-3 max-w-2xl text-zinc-600">
-            Create clean passport photos in minutes with balanced spacing, correct size, and print-ready A4 output.
+            PrintPix is a smart photo resizer and passport-size photo printing platform that lets users instantly crop, resize, and prepare images for government exams, forms, ID cards, and print shops, with easy email sharing directly to photo studios for fast printing.
+
           </p>
 
           <section className="mt-8 grid gap-4 sm:grid-cols-2">
