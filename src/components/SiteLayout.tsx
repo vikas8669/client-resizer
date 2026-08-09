@@ -69,31 +69,31 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
 
       <StickyBanner
         ref={bannerRef}
-        className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white py-1.5"
+        className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white py-1.5 px-3"
         onOpenChange={setIsBannerOpen}
       >
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-center px-4 sm:px-6">
-          <span className="inline-flex items-center gap-1.5 bg-white/20 text-white text-[11px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-            <span>📱</span> Android APK
-          </span>
-          <p className="text-white text-xs sm:text-sm font-medium leading-snug">
-            Download <span className="font-extrabold">PrintPix Mobile App</span> for Android!
-          </p>
+        <div className="flex items-center justify-between sm:justify-center w-full max-w-5xl mx-auto gap-2 pr-6 sm:pr-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="bg-white/20 text-white text-[10px] sm:text-[11px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+              📱 APK
+            </span>
+            <p className="text-white text-xs sm:text-sm font-medium truncate">
+              <span className="sm:hidden font-bold">PrintPix Android App</span>
+              <span className="hidden sm:inline">
+                Download <span className="font-extrabold">PrintPix Mobile App</span> for Android!
+              </span>
+            </p>
+          </div>
+
           <a
             href="https://drive.google.com/uc?export=download&id=1OZsmRfKfE9Jo81LZK3hFxS3iaBtEwqM0"
             target="_blank"
             rel="noopener noreferrer"
             download="PrintPix.apk"
-            className="inline-flex items-center gap-1.5 bg-white text-indigo-950 font-bold text-xs sm:text-sm px-3.5 py-1 rounded-full shadow-md hover:bg-slate-100 hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 shrink-0"
+            className="inline-flex items-center gap-1 bg-white text-indigo-950 font-extrabold text-xs sm:text-sm px-3 py-1 rounded-full shadow-md hover:bg-slate-100 transition-all duration-200 hover:scale-105 active:scale-95 shrink-0"
           >
-            <svg
-              className="w-4 h-4 text-emerald-600"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path d="M17.523 15.3414C17.058 15.3414 16.681 14.9644 16.681 14.4994C16.681 14.0344 17.058 13.6574 17.523 13.6574C17.988 13.6574 18.365 14.0344 18.365 14.4994C18.365 14.9644 17.988 15.3414 17.523 15.3414ZM6.477 15.3414C6.012 15.3414 5.635 14.9644 5.635 14.4994C5.635 14.0344 6.012 13.6574 6.477 13.6574C6.942 13.6574 7.319 14.0344 7.319 14.4994C7.319 14.9644 6.942 15.3414 6.477 15.3414ZM17.962 10.9664L19.742 7.88438C19.878 7.64838 19.797 7.34638 19.561 7.21038C19.325 7.07438 19.023 7.15538 18.887 7.39138L17.078 10.5254C15.589 9.84338 13.864 9.44438 12 9.44438C10.136 9.44438 8.411 9.84338 6.922 10.5254L5.113 7.39138C4.977 7.15538 4.675 7.07438 4.439 7.21038C4.203 7.34638 4.122 7.64838 4.258 7.88438L6.038 10.9664C2.585 12.8604 0.222 16.3534 0 20.4444H24C23.778 16.3534 21.415 12.8604 17.962 10.9664Z" />
-            </svg>
-            Download APK ⬇️
+            <span>Download</span>
+            <span>⬇️</span>
           </a>
         </div>
       </StickyBanner>
