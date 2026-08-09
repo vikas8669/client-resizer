@@ -19,10 +19,11 @@ export default function Logo() {
     <Image
       src={currentTheme === "dark" ? "/pp-d.svg" : "/pp.svg"}
       alt="PrintPix"
-      width={200}
-      height={100}
+      width={140}
+      height={40}
       priority
-      className="transition-all duration-300"
+      // style={{ width: "auto", height: "140" }}
+      className="transition-all duration-300 h-15 w-auto"
     />
   );
 }

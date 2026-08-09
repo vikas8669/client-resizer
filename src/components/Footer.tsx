@@ -62,8 +62,8 @@ export function Footer() {
                 Product
               </h3>
               <ul className="space-y-2 text-sm">
-                <li><Link href="#features" className="hover:text-primary transition">Features</Link></li>
-                <li><Link href="#editor" className="hover:text-primary transition">Editor</Link></li>
+                <li>Features</li>
+                <li>Editor</li>
               </ul>
             </div>
 
@@ -72,8 +72,8 @@ export function Footer() {
                 Company
               </h3>
               <ul className="space-y-2 text-sm">
-                <li><Link href="#" className="hover:text-primary transition">Contact</Link></li>
-                <li><Link href="#" className="hover:text-primary transition">Upwork</Link></li>
+                <li>Contact</li>
+                <li>Upwork</li>
               </ul>
             </div>
 

@@ -52,7 +52,7 @@ export default function RootLayout({
       className="h-full antialiased"
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-500">
+      <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-500" suppressHydrationWarning>
         <Providers>
           <SiteLayout>
             {children}

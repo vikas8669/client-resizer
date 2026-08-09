@@ -27,8 +27,6 @@ export function useFeedback() {
         const res = await apiClient.get(ENDPOINTS.FEEDBACK);
         return res.data?.data || [];
       } catch (error: any) {
-        const errorMsg = error.message || 'Failed to fetch feedback';
-        console.warn('Feedback service unavailable:', errorMsg);
         return [];
       }
     },
@@ -42,7 +40,6 @@ export function useFeedback() {
         const res = await apiClient.get(ENDPOINTS.TOP_FEEDBACK);
         return res.data?.data || [];
       } catch (error: any) {
-        console.warn('Failed to fetch top feedback:', error.message);
         return [];
       }
     },
@@ -60,14 +57,11 @@ export function useFeedback() {
           total: data?.totalCount || 0,
         };
       } catch (error: any) {
-        console.warn('Failed to fetch average rating:', error.message);
         return { average: 0, total: 0 };
       }
     },
-
     retry: 0,
   });
-
 
   const resolvedQuery = useQuery<Feedback[]>({
     queryKey: ['feedback', 'resolved'],
@@ -76,7 +70,6 @@ export function useFeedback() {
         const res = await apiClient.get(ENDPOINTS.RESOLVED_FEEDBACK);
         return res.data?.data || [];
       } catch (error: any) {
-        console.warn('Failed to fetch resolved feedback:', error.message);
         return [];
       }
     },
