@@ -103,7 +103,7 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
       {visibility.showObjective !== false && objective && (
         <div className="mt-6 mb-6 clear-both">
           <div
-            className="bg-[black] text-black font-bold text-xs sm:text-sm uppercase mb-3 w-full tracking-normal"
+            className="bg-[#d4d4d8] text-black font-bold text-xs sm:text-sm uppercase mb-2 w-full tracking-normal"
             style={{ height: "32px", padding: "0 12px", display: "flex", alignItems: "center", lineHeight: "1" }}
           >
             <span style={{ transform: "translateY(-3px)" }}>CAREER OBJECTIVE</span>
@@ -118,7 +118,7 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
       {visibility.showEducation !== false && education && education.length > 0 && (
         <div className="mt-6 mb-6 clear-both">
           <div
-            className="bg-[black] text-black font-bold text-xs sm:text-sm uppercase mb-3 w-full tracking-normal"
+            className="bg-[#d4d4d8] text-black font-bold text-xs sm:text-sm uppercase mb-3 w-full tracking-normal"
             style={{ height: "32px", padding: "0 12px", display: "flex", alignItems: "center", lineHeight: "1" }}
           >
             <span style={{ transform: "translateY(-3px)" }}>ACADEMIC QUALIFICATION</span>
@@ -158,7 +158,7 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
       {visibility.showExperience !== false && experience && experience.length > 0 && (
         <div className="mt-6 mb-6 clear-both">
           <div
-            className="bg-[black] text-black font-bold text-xs sm:text-sm uppercase mb-3 w-full tracking-normal"
+            className="bg-[#d4d4d8] text-black font-bold text-xs sm:text-sm uppercase mb-3 w-full tracking-normal"
             style={{ height: "32px", padding: "0 12px", display: "flex", alignItems: "center", lineHeight: "1" }}
           >
             <span style={{ transform: "translateY(-3px)" }}>EXPERIENCE</span>
@@ -183,9 +183,9 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
       {/* SKILLS SECTION */}
       {visibility.showSkills !== false && skills && skills.length > 0 && (
         <div className="mt-6 mb-6 clear-both">
-          <div
+          <div 
             style={{
-              backgroundColor: "black",
+              backgroundColor: "#d4d4d8",
               color: "#000000",
               padding: "0 12px",
               height: "32px",
@@ -201,7 +201,7 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
               letterSpacing: "normal",
             }}
           >
-            <span style={{ transform: "translateY(-3px)" }}>
+            <span  style={{ transform: "translateY(-3px)" }}>
               TECHNICAL & PROFESSIONAL SKILLS
             </span>
           </div>
@@ -251,7 +251,7 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
         <>
           {customSections.map((sec) => (
             <div key={sec.id} className="mt-6 mb-6 clear-both">
-              <div className="bg-[black] text-black px-3 py-1.5 font-bold text-xs sm:text-sm uppercase mb-3 block w-full tracking-normal">
+              <div className="bg-[#d4d4d8] text-black px-3 py-1.5 font-bold text-xs sm:text-sm uppercase mb-3 block w-full tracking-normal">
                 {sec.title || "ADDITIONAL INFORMATION"}
               </div>
               <div className="text-xs sm:text-sm text-black px-1 whitespace-pre-line leading-relaxed font-sans">
@@ -266,7 +266,7 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
       {showPersonalSection && (
         <div className="mt-6 mb-6 clear-both">
           <div
-            className="bg-[black] text-black font-bold text-xs sm:text-sm uppercase mb-3 w-full tracking-normal"
+            className="bg-[#d4d4d8] text-black font-bold text-xs sm:text-sm uppercase mb-3 w-full tracking-normal"
             style={{ height: "32px", padding: "0 12px", display: "flex", alignItems: "center", lineHeight: "1" }}
           >
             <span style={{ transform: "translateY(-3px)" }}>PERSONAL INFORMATION</span>
@@ -322,7 +322,7 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
       {visibility.showDeclaration !== false && (
         <div className="mt-6 mb-8 clear-both">
           <div
-            className="bg-[black] text-black font-bold text-xs sm:text-sm uppercase mb-3 w-full tracking-normal"
+            className="bg-[#d4d4d8] text-black font-bold text-xs sm:text-sm uppercase mb-3 w-full tracking-normal"
             style={{ height: "32px", padding: "0 12px", display: "flex", alignItems: "center", lineHeight: "1" }}
           >
             <span style={{ transform: "translateY(-3px)" }}>DECLARATION</span>
