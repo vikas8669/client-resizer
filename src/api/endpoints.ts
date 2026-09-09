@@ -29,6 +29,9 @@ export const ENDPOINTS = {
   USERS: '/api/auth/users',
   DELETE_ME: '/api/auth/me',
   DELETE_USER: (id: string) => `/api/auth/users/${id}`,
+
+  RESUMES: '/api/resumes',
+  RESUME_BY_ID: (id: string) => `/api/resumes/${id}`,
 };
 
 // Log API configuration in development

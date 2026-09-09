@@ -110,7 +110,22 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
 
           {/* DESKTOP NAVIGATION */}
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            {["Product", "Solutions", "Customers", "Pricing"].map((item) => (
+            <Link
+              href="/product"
+              className="text-sm font-medium text-zinc-500 hover:text-black dark:hover:text-white transition-colors"
+            >
+              PDF Resizer / Sharp
+            </Link>
+            <Link
+              href="/resume-builder"
+              className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 transition-colors flex items-center gap-1.5"
+            >
+              <span>Resume Maker</span>
+              <span className="bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                New
+              </span>
+            </Link>
+            {["Solutions", "Customers", "Pricing"].map((item) => (
               <Link
                 key={item}
                 href={`/${item.toLowerCase()}`}
@@ -188,7 +203,11 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
               style={{ height: `calc(100vh - 4rem - ${isBannerOpen ? bannerHeight : 0}px)` }}
             >
               <div className="flex flex-col gap-6 text-xl font-medium">
-                <Link onClick={closeMenu} href="/product">Product</Link>
+                <Link onClick={closeMenu} href="/product">PDF Resizer / Sharp</Link>
+                <Link onClick={closeMenu} href="/resume-builder" className="text-blue-600 dark:text-blue-400 font-bold flex items-center gap-2">
+                  <span>Resume Maker</span>
+                  <span className="bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-xs px-2 py-0.5 rounded-full uppercase">New</span>
+                </Link>
                 <Link onClick={closeMenu} href="/solutions">Solutions</Link>
                 <Link onClick={closeMenu} href="/customers">Customers</Link>
                 <Link onClick={closeMenu} href="/pricing">Pricing</Link>
