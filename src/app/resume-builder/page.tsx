@@ -195,6 +195,14 @@ export default function ResumeBuilderPage() {
               if (borderVal && borderVal !== "transparent" && borderVal !== "rgba(0, 0, 0, 0)") {
                 htmlEl.style.borderColor = parseCssColorToRgb(borderVal);
               }
+
+              if (compStyle.fontWeight && compStyle.fontWeight !== "normal" && compStyle.fontWeight !== "400") {
+                htmlEl.style.fontWeight = compStyle.fontWeight;
+              }
+
+              if (compStyle.fontSize) {
+                htmlEl.style.fontSize = compStyle.fontSize;
+              }
             }
 
             // Sanitize any remaining inline cssText with lab/oklch

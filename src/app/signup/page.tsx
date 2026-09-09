@@ -150,7 +150,7 @@ function SignupContent() {
     <main className="relative flex min-h-screen overflow-hidden bg-white dark:bg-zinc-950">
       
       {/* GRID BACKGROUND */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.07] dark:opacity-[0.05]">
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.07] dark:opacity-[0.05] ">
         <svg width="100%" height="100%">
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="1" />
@@ -170,7 +170,7 @@ function SignupContent() {
       </div>
 
       {/* RIGHT SIDE */}
-      <div className="relative z-10 flex w-full flex-col items-center justify-center px-6 py-8 lg:w-1/2">
+      <div className="relative z-10 flex w-full flex-col items-center justify-center px-6 py-8 lg:w-1/2 bg-white dark:bg-zinc-950">
         <motion.div 
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -246,7 +246,7 @@ function SignupContent() {
                         <Input type={showPassword ? "text" : "password"} placeholder="*******" className="rounded-lg h-9 pr-9" {...field} />
                       </FormControl>
                       <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2 text-zinc-400">
-                        {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                        {showPassword ? <EyeOff className='text-center mt-1' size={15} /> : <Eye className='text-center mt-1' size={15} />}
                       </button>
                     </div>
 

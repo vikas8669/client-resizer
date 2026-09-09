@@ -51,6 +51,25 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
 
   const showPersonalSection = visibility.showPersonalSection !== false && hasPersonalFields;
 
+  const sectionHeaderStyle: React.CSSProperties = {
+    backgroundColor: "#e5e7eb",
+    color: "#000000",
+    minHeight: "30px",
+    padding: "4px 12px",
+    display: "flex",
+    alignItems: "center",
+    fontWeight: "bold",
+    fontSize: "13px",
+    textTransform: "uppercase",
+    width: "100%",
+    boxSizing: "border-box",
+    lineHeight: "1.3",
+    letterSpacing: "0.03em",
+    wordSpacing: "0.2em",
+    marginBottom: "12px",
+    textAlign: "center"
+  };
+
   return (
     <div
       id="resume-paper"
@@ -68,27 +87,64 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
     >
       {/* OPTIONAL HEADER: RESUME / CURRICULUM VITAE */}
       {showHeader && (
-        <h1 className="text-xl sm:text-2xl font-extrabold text-center tracking-normal mb-4 text-black uppercase">
+        <h1
+          style={{
+            fontSize: "22px",
+            fontWeight: "600",
+            textAlign: "center",
+            textTransform: "uppercase",
+            marginBottom: "10px",
+            color: "#000000",
+            // letterSpacing: "normal",
+          }}
+        >
           {headerTitle}
         </h1>
       )}
 
       {/* NAME & CONTACT DETAILS */}
-      <div className="mb-5 space-y-1">
-        <h2 className="text-xl sm:text-2xl font-bold text-black mb-1.5">{personalInfo.name || "Your Name"}</h2>
+      <div style={{ marginBottom: "20px", display: "block", width: "100%" }}>
+        <h2
+          style={{
+            fontSize: "22px",
+            fontWeight: "800",
+            color: "#000000",
+            marginBottom: "4px",
+            lineHeight: "1.2",
+          }}
+        >
+          {personalInfo.name || "Your Name"}
+        </h2>
         {jobTitle && (
-          <div className="text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+          <div
+            style={{
+              fontSize: "13px",
+              fontWeight: "800",
+              color: "#000000",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              marginBottom: "6px",
+            }}
+          >
             {jobTitle}
           </div>
         )}
         {visibility.showAddress !== false && personalInfo.address && (
-          <div className="text-xs sm:text-sm text-black whitespace-pre-line leading-tight mb-2">
+          <div
+            style={{
+              fontSize: "13px",
+              color: "#000000",
+              whiteSpace: "pre-line",
+              lineHeight: "1.4",
+              marginBottom: "8px",
+            }}
+          >
             {personalInfo.address}
           </div>
         )}
-        <div className="text-xs sm:text-sm text-black space-y-0.5 pt-0.5">
+        <div style={{ fontSize: "13px", color: "#000000", lineHeight: "1.4" }}>
           {visibility.showPhone !== false && personalInfo.phone && (
-            <div>Mob No. : {personalInfo.phone}</div>
+            <div style={{ marginBottom: "2px" }}>Mob No. : {personalInfo.phone}</div>
           )}
           {visibility.showEmail !== false && personalInfo.email && (
             <div>Email Id : {personalInfo.email}</div>
@@ -97,18 +153,33 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
       </div>
 
       {/* HORIZONTAL LINE */}
-      <hr className="border-t-2 border-gray-800 mb-6" />
+      <div
+        style={{
+          width: "100%",
+          borderTop: "2px solid #1f2937",
+          marginBottom: "24px",
+          display: "block",
+        }}
+      />
 
       {/* CAREER OBJECTIVE */}
       {visibility.showObjective !== false && objective && (
-        <div className="mt-6 mb-6 clear-both">
-          <div
-            className="bg-[#d4d4d8] text-black font-bold text-xs sm:text-sm uppercase mb-2 w-full tracking-normal"
-            style={{ height: "32px", padding: "0 12px", display: "flex", alignItems: "center", lineHeight: "1" }}
-          >
-            <span style={{ transform: "translateY(-3px)" }}>CAREER OBJECTIVE</span>
+        <div style={{ width: "100%", marginBottom: "24px", display: "block", clear: "both" }}>
+          <div style={sectionHeaderStyle}>
+            <span style={{ letterSpacing: "0.03em", wordSpacing: "0.2em",  textAlign: "center", paddingBottom:"12px", }}>CAREER OBJECTIVE</span>
           </div>
-          <div className="text-xs sm:text-sm text-black leading-relaxed px-1 font-sans">
+          <div
+            style={{
+              // textAlign: "center",
+              fontSize: "13px",
+              color: "#000000",
+              lineHeight: "1.6",
+              paddingLeft: "4px",
+              paddingBottom:"15px",
+              paddingRight: "4px",
+              fontFamily: "Arial, sans-serif",
+            }}
+          >
             {objective}
           </div>
         </div>
@@ -116,34 +187,48 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
 
       {/* ACADEMIC QUALIFICATION */}
       {visibility.showEducation !== false && education && education.length > 0 && (
-        <div className="mt-6 mb-6 clear-both">
-          <div
-            className="bg-[#d4d4d8] text-black font-bold text-xs sm:text-sm uppercase mb-3 w-full tracking-normal"
-            style={{ height: "32px", padding: "0 12px", display: "flex", alignItems: "center", lineHeight: "1" }}
-          >
-            <span style={{ transform: "translateY(-3px)" }}>ACADEMIC QUALIFICATION</span>
+        <div style={{ width: "100%", marginBottom: "24px", display: "block", clear: "both" }}>
+          <div style={sectionHeaderStyle}>
+            <span style={{ letterSpacing: "0.03em", wordSpacing: "0.2em", textAlign: "center", paddingBottom:"12px", }}>ACADEMIC QUALIFICATION</span>
           </div>
-          <div className="w-full overflow-hidden">
-            <table className="w-full text-left border-collapse border border-gray-400 text-xs sm:text-sm table-fixed">
+          <div style={{ width: "100%", display: "block" }}>
+            <table
+              style={{
+                width: "100%",
+                textAlign: "left",
+                borderCollapse: "collapse",
+                border: "1px solid #9ca3af",
+                fontSize: "12px",
+                fontFamily: "Arial, sans-serif",
+                color: "#000000",
+                boxSizing: "border-box",
+              }}
+            >
               <thead>
-                <tr className="bg-gray-100 text-black border-b border-gray-400">
-                  <th className="border border-gray-400 px-2 py-2 font-bold text-center w-[8%] align-middle whitespace-nowrap">S.No.</th>
-                  <th className="border border-gray-400 px-3 py-2 font-bold align-middle w-[32%] whitespace-nowrap">Qualification</th>
-                  <th className="border border-gray-400 px-3 py-2 font-bold align-middle w-[42%] whitespace-nowrap">University / Board</th>
-                  <th className="border border-gray-400 px-2 py-2 font-bold text-center align-middle w-[9%] whitespace-nowrap">Year</th>
-                  <th className="border border-gray-400 px-2 py-2 font-bold text-center align-middle w-[9%] whitespace-nowrap">Per %</th>
+                <tr style={{ backgroundColor: "#f3f4f6", color: "#000000", borderBottom: "1px solid #9ca3af" }}>
+                  <th style={{ border: "1px solid #9ca3af", padding: "8px 6px", fontWeight: "bold", textAlign: "center", width: "8%", verticalAlign: "middle" }}>S.No.</th>
+                  <th style={{ border: "1px solid #9ca3af", padding: "8px 10px", fontWeight: "bold", textAlign: "left", width: "30%", verticalAlign: "middle" }}>Qualification</th>
+                  <th style={{ border: "1px solid #9ca3af", padding: "8px 10px", fontWeight: "bold", textAlign: "left", width: "42%", verticalAlign: "middle" }}>University / Board</th>
+                  <th style={{ border: "1px solid #9ca3af", padding: "8px 6px", fontWeight: "bold", textAlign: "center", width: "10%", verticalAlign: "middle" }}>Year</th>
+                  <th style={{ border: "1px solid #9ca3af", padding: "8px 6px", fontWeight: "bold", textAlign: "center", width: "10%", verticalAlign: "middle" }}>Per %</th>
                 </tr>
               </thead>
               <tbody>
                 {education.map((edu, idx) => (
-                  <tr key={idx} className="border-b border-gray-400">
-                    <td className="border border-gray-400 px-2 py-2 text-center align-middle">{edu.sno || idx + 1}</td>
-                    <td className="border border-gray-400 px-3 py-2 font-bold text-black align-middle break-words">{edu.qualification}</td>
-                    <td className="border border-gray-400 px-3 py-2 align-middle break-words">{edu.board}</td>
-                    <td className="border border-gray-400 px-2 py-2 text-center align-middle">
+                  <tr key={idx} style={{ borderBottom: "1px solid #9ca3af" }}>
+                    <td style={{ border: "1px solid #9ca3af", padding: "8px 6px", textAlign: "center", verticalAlign: "middle", color: "#000000" }}>
+                      {edu.sno || idx + 1}
+                    </td>
+                    <td style={{ border: "1px solid #9ca3af", padding: "8px 10px", fontWeight: "bold", color: "#000000", verticalAlign: "middle", wordBreak: "break-word" }}>
+                      {edu.qualification}
+                    </td>
+                    <td style={{ border: "1px solid #9ca3af", padding: "8px 10px", color: "#000000", verticalAlign: "middle", wordBreak: "break-word" }}>
+                      {edu.board}
+                    </td>
+                    <td style={{ border: "1px solid #9ca3af", padding: "8px 6px", textAlign: "center", verticalAlign: "middle", color: "#000000" }}>
                       {edu.isPursuing ? (edu.year ? `Pursuing (${edu.year})` : "Pursuing") : edu.year}
                     </td>
-                    <td className="border border-gray-400 px-2 py-2 text-center align-middle">
+                    <td style={{ border: "1px solid #9ca3af", padding: "8px 6px", textAlign: "center", verticalAlign: "middle", color: "#000000" }}>
                       {edu.isPursuing ? "Pursuing" : (edu.percentage ? (edu.percentage.endsWith("%") ? edu.percentage : `${edu.percentage}%`) : "")}
                     </td>
                   </tr>
@@ -156,21 +241,73 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
 
       {/* EXPERIENCE */}
       {visibility.showExperience !== false && experience && experience.length > 0 && (
-        <div className="mt-6 mb-6 clear-both">
-          <div
-            className="bg-[#d4d4d8] text-black font-bold text-xs sm:text-sm uppercase mb-3 w-full tracking-normal"
-            style={{ height: "32px", padding: "0 12px", display: "flex", alignItems: "center", lineHeight: "1" }}
-          >
-            <span style={{ transform: "translateY(-3px)" }}>EXPERIENCE</span>
+        <div style={{ width: "100%", marginBottom: "24px", display: "block", clear: "both", textAlign: "left" }}>
+          <div style={sectionHeaderStyle}>
+            <span style={{ letterSpacing: "0.03em", wordSpacing: "0.2em", textAlign: "center", paddingBottom:"12px", }}>EXPERIENCE</span>
           </div>
-          <div className="space-y-3 px-1">
+          <div style={{ paddingLeft: "0px", paddingRight: "0px", textAlign: "left", width: "100%" }}>
             {experience.map((exp, idx) => (
-              <div key={idx} className="text-xs sm:text-sm">
-                {exp.company && <div className="font-bold text-black text-sm uppercase tracking-wide">{exp.company}</div>}
-                {exp.title && <div className="font-semibold text-gray-900 text-xs sm:text-sm">{exp.title}</div>}
-                {exp.duration && <div className="text-black italic text-xs mb-1">Experience: {exp.duration}</div>}
+              <div key={idx} style={{ marginBottom: "16px", fontSize: "13px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2px", width: "100%" }}>
+                  <div>
+                    {exp.company && (
+                      <div
+                        style={{
+                          fontWeight: "700",
+                          color: "#000000",
+                          fontSize: "14px",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.03em",
+                          marginBottom: "2px",
+                          textAlign: "left",
+                        }}
+                      >
+                        {exp.company}
+                      </div>
+                    )}
+                    {exp.title && (
+                      <div
+                        style={{
+                          fontWeight: "600",
+                          color: "#000000",
+                          fontSize: "13px",
+                          marginBottom: "3px",
+                          textAlign: "left",
+                        }}
+                      >
+                        {exp.title}
+                      </div>
+                    )}
+                  </div>
+                  {exp.duration && (
+                    <div
+                      style={{
+                        fontStyle: "italic",
+                        fontWeight: "700",
+                        color: "#000000",
+                        fontSize: "12px",
+                        textAlign: "right",
+                        whiteSpace: "nowrap",
+                        marginLeft: "12px",
+                        flexShrink: 0,
+                      }}
+                    >
+                       {exp.duration}
+                    </div>
+                  )}
+                </div>
                 {exp.details && (
-                  <p className="mt-1 text-black whitespace-pre-line leading-relaxed">
+                  <p
+                    style={{
+                      marginTop: "4px",
+                      color: "#000000",
+                      whiteSpace: "pre-line",
+                      lineHeight: "1.6",
+                      fontSize: "13px",
+                      margin: "4px 0 0 0",
+                      textAlign: "left",
+                    }}
+                  >
                     {exp.details}
                   </p>
                 )}
@@ -182,30 +319,19 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
 
       {/* SKILLS SECTION */}
       {visibility.showSkills !== false && skills && skills.length > 0 && (
-        <div className="mt-6 mb-6 clear-both">
-          <div 
+        <div style={{ width: "100%", marginBottom: "24px", display: "block", clear: "both" }}>
+          <div style={sectionHeaderStyle}>
+            <span style={{ letterSpacing: "0.03em", wordSpacing: "0.2em", textAlign: "center", paddingBottom:"12px", }}>TECHNICAL &amp; PROFESSIONAL SKILLS</span>
+          </div>
+          <div
             style={{
-              backgroundColor: "#d4d4d8",
-              color: "#000000",
-              padding: "0 12px",
-              height: "32px",
-              fontWeight: "bold",
-              fontSize: "13px",
-              textTransform: "uppercase",
-              marginBottom: "14px",
               display: "flex",
-              alignItems: "center",
-              width: "100%",
-              boxSizing: "border-box",
-              lineHeight: "1",
-              letterSpacing: "normal",
+              flexWrap: "wrap",
+              gap: "10px",
+              paddingTop: "2px",
+              paddingBottom: "4px",
             }}
           >
-            <span  style={{ transform: "translateY(-3px)" }}>
-              TECHNICAL & PROFESSIONAL SKILLS
-            </span>
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", paddingTop: "4px", paddingBottom: "6px" }}>
             {skills.map((skill, idx) => (
               <span
                 key={idx}
@@ -214,32 +340,31 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  height: "30px",
-                  lineHeight: "1",
+                  minHeight: "28px",
+                  lineHeight: "1.2",
                   border: "1px solid #4b5563",
                   backgroundColor: "#ffffff",
                   color: "#000000",
                   fontSize: "12px",
                   fontWeight: "bold",
-                  padding: "0 16px",
+                  padding: "4px 16px",
                   borderRadius: "9999px",
                   whiteSpace: "nowrap",
                   boxSizing: "border-box",
-                  verticalAlign: "middle",
+                  textAlign: "center",
+                  
                 }}
               >
                 <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    lineHeight: "1",
-                    // Arial's glyphs sit low inside their line box. Raise the whole
-                    // icon-and-label group so it is visually centered in the pill.
-                    transform: "translateY(-5px)",
-                  }}
-                >
-                  <span style={{ lineHeight: "1" }}>{skill}</span>
-                </span>
+            style={{
+              display: "inline-block",
+              lineHeight: "1",
+              transform: "translateY(-4px)",
+            }}
+          >
+                {skill}
+            {/* {s} */}
+          </span>
               </span>
             ))}
           </div>
@@ -250,11 +375,21 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
       {customSections && customSections.length > 0 && (
         <>
           {customSections.map((sec) => (
-            <div key={sec.id} className="mt-6 mb-6 clear-both">
-              <div className="bg-[#d4d4d8] text-black px-3 py-1.5 font-bold text-xs sm:text-sm uppercase mb-3 block w-full tracking-normal">
-                {sec.title || "ADDITIONAL INFORMATION"}
+            <div key={sec.id} style={{ width: "100%", marginBottom: "24px", display: "block", clear: "both" }}>
+              <div style={sectionHeaderStyle}>
+                <span style={{ letterSpacing: "0.03em", wordSpacing: "0.2em", textAlign: "center", paddingBottom:"12px", }}>{sec.title || "ADDITIONAL INFORMATION"}</span>
               </div>
-              <div className="text-xs sm:text-sm text-black px-1 whitespace-pre-line leading-relaxed font-sans">
+              <div
+                style={{
+                  fontSize: "13px",
+                  color: "#000000",
+                  lineHeight: "1.6",
+                  paddingLeft: "4px",
+                  paddingRight: "4px",
+                  whiteSpace: "pre-line",
+                  fontFamily: "Arial, sans-serif",
+                }}
+              >
                 {sec.content}
               </div>
             </div>
@@ -264,54 +399,51 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
 
       {/* PERSONAL INFORMATION (With optional field visibility) */}
       {showPersonalSection && (
-        <div className="mt-6 mb-6 clear-both">
-          <div
-            className="bg-[#d4d4d8] text-black font-bold text-xs sm:text-sm uppercase mb-3 w-full tracking-normal"
-            style={{ height: "32px", padding: "0 12px", display: "flex", alignItems: "center", lineHeight: "1" }}
-          >
-            <span style={{ transform: "translateY(-3px)" }}>PERSONAL INFORMATION</span>
+        <div style={{ width: "100%", marginBottom: "24px", display: "block", clear: "both" }}>
+          <div style={sectionHeaderStyle}>
+            <span style={{ letterSpacing: "0.03em", wordSpacing: "0.2em", textAlign: "center", paddingBottom:"12px", }}>PERSONAL INFORMATION</span>
           </div>
-          <div className="text-xs sm:text-sm space-y-1.5 px-1 max-w-lg">
+          <div style={{ fontSize: "13px", color: "#000000", paddingLeft: "4px", paddingRight: "4px", maxWidth: "520px" }}>
             {visibility.showFatherName !== false && personalInfo.fatherName && (
-              <div className="grid grid-cols-[150px_20px_1fr] items-center">
-                <span className="font-semibold text-gray-900">Father&apos;s Name</span>
-                <span className="font-bold text-center">:</span>
-                <span className="font-bold text-black">{personalInfo.fatherName}</span>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: "6px" }}>
+                <span style={{ width: "150px", fontWeight: "700", color: "#000000", flexShrink: 0 }}>Father&apos;s Name</span>
+                <span style={{ width: "20px", fontWeight: "bold", textAlign: "center", color: "#000000", flexShrink: 0 }}>:</span>
+                <span style={{ fontWeight: "bold", color: "#000000" }}>{personalInfo.fatherName}</span>
               </div>
             )}
             {visibility.showDob !== false && personalInfo.dob && (
-              <div className="grid grid-cols-[150px_20px_1fr] items-center">
-                <span className="font-semibold text-gray-900">Date of Birth</span>
-                <span className="font-bold text-center">:</span>
-                <span>{personalInfo.dob}</span>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: "6px" }}>
+                <span style={{ width: "150px", fontWeight: "700", color: "#000000", flexShrink: 0 }}>Date of Birth</span>
+                <span style={{ width: "20px", fontWeight: "bold", textAlign: "center", color: "#000000", flexShrink: 0 }}>:</span>
+                <span style={{ color: "#000000" }}>{personalInfo.dob}</span>
               </div>
             )}
             {visibility.showLanguages !== false && personalInfo.languages && (
-              <div className="grid grid-cols-[150px_20px_1fr] items-center">
-                <span className="font-semibold text-gray-900">Language Known</span>
-                <span className="font-bold text-center">:</span>
-                <span>{personalInfo.languages}</span>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: "6px" }}>
+                <span style={{ width: "150px", fontWeight: "700", color: "#000000", flexShrink: 0 }}>Language Known</span>
+                <span style={{ width: "20px", fontWeight: "bold", textAlign: "center", color: "#000000", flexShrink: 0 }}>:</span>
+                <span style={{ color: "#000000" }}>{personalInfo.languages}</span>
               </div>
             )}
             {visibility.showGender !== false && personalInfo.gender && (
-              <div className="grid grid-cols-[150px_20px_1fr] items-center">
-                <span className="font-semibold text-gray-900">Gender</span>
-                <span className="font-bold text-center">:</span>
-                <span>{personalInfo.gender}</span>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: "6px" }}>
+                <span style={{ width: "150px", fontWeight: "700", color: "#000000", flexShrink: 0 }}>Gender</span>
+                <span style={{ width: "20px", fontWeight: "bold", textAlign: "center", color: "#000000", flexShrink: 0 }}>:</span>
+                <span style={{ color: "#000000" }}>{personalInfo.gender}</span>
               </div>
             )}
             {visibility.showNationality !== false && personalInfo.nationality && (
-              <div className="grid grid-cols-[150px_20px_1fr] items-center">
-                <span className="font-semibold text-gray-900">Nationality</span>
-                <span className="font-bold text-center">:</span>
-                <span>{personalInfo.nationality}</span>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: "6px" }}>
+                <span style={{ width: "150px", fontWeight: "700", color: "#000000", flexShrink: 0 }}>Nationality</span>
+                <span style={{ width: "20px", fontWeight: "bold", textAlign: "center", color: "#000000", flexShrink: 0 }}>:</span>
+                <span style={{ color: "#000000" }}>{personalInfo.nationality}</span>
               </div>
             )}
             {visibility.showMaritalStatus !== false && personalInfo.maritalStatus && (
-              <div className="grid grid-cols-[150px_20px_1fr] items-center">
-                <span className="font-semibold text-gray-900">Marital Status</span>
-                <span className="font-bold text-center">:</span>
-                <span>{personalInfo.maritalStatus}</span>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: "6px" }}>
+                <span style={{ width: "150px", fontWeight: "700", color: "#000000", flexShrink: 0 }}>Marital Status</span>
+                <span style={{ width: "20px", fontWeight: "bold", textAlign: "center", color: "#000000", flexShrink: 0 }}>:</span>
+                <span style={{ color: "#000000" }}>{personalInfo.maritalStatus}</span>
               </div>
             )}
           </div>
@@ -320,14 +452,11 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
 
       {/* DECLARATION */}
       {visibility.showDeclaration !== false && (
-        <div className="mt-6 mb-8 clear-both">
-          <div
-            className="bg-[#d4d4d8] text-black font-bold text-xs sm:text-sm uppercase mb-3 w-full tracking-normal"
-            style={{ height: "32px", padding: "0 12px", display: "flex", alignItems: "center", lineHeight: "1" }}
-          >
-            <span style={{ transform: "translateY(-3px)" }}>DECLARATION</span>
+        <div style={{ width: "100%", marginBottom: "32px", display: "block", clear: "both" }}>
+          <div style={sectionHeaderStyle}>
+            <span style={{ letterSpacing: "0.03em", wordSpacing: "0.2em",textAlign: "center", paddingBottom:"12px", }}>DECLARATION</span>
           </div>
-          <p className="text-xs sm:text-sm text-black px-1 leading-relaxed">
+          <p style={{ fontSize: "13px", color: "#000000", lineHeight: "1.6", paddingLeft: "4px", paddingRight: "4px", margin: 0 }}>
             I hereby declared that the above information given by me is true to best of my Knowledge.
           </p>
         </div>
@@ -335,10 +464,21 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
 
       {/* FOOTER: DATE & PLACE (LEFT), SIGNATURE (RIGHT) */}
       {(visibility.showDatePlace !== false || visibility.showSignature !== false) && (
-        <div className="flex items-end justify-between text-xs sm:text-sm font-bold pt-6 border-t border-transparent">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            fontSize: "13px",
+            fontWeight: "bold",
+            color: "#000000",
+            paddingTop: "24px",
+            width: "100%",
+          }}
+        >
           <div>
             {visibility.showDatePlace !== false && (personalInfo.date || personalInfo.place) && (
-              <div className="space-y-0.5">
+              <div style={{ lineHeight: "1.4" }}>
                 {personalInfo.date && <div>Date : {personalInfo.date}</div>}
                 {personalInfo.place && <div>Place : {personalInfo.place}</div>}
               </div>
@@ -346,7 +486,7 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
           </div>
           <div>
             {visibility.showSignature !== false && (
-              <div className="text-right">
+              <div style={{ textAlign: "right" }}>
                 <div>({personalInfo.name || "Signature"})</div>
               </div>
             )}
@@ -363,31 +503,74 @@ const TraditionalTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
 const ModernTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
   const { personalInfo, visibility = {}, objective, education, experience, customSections = [], skills = [], jobTitle } = data;
 
+  // Helper to format skill strings nicely (e.g. "ComputerBasics" -> "Computer Basics")
+  const formatSkillName = (str: string) => {
+    if (!str) return "";
+    return str.replace(/([a-z])([A-Z])/g, "$1 $2");
+  };
+
   return (
     <div
       id="resume-paper"
-      className="w-full bg-white text-zinc-800 font-sans p-0 shadow-xl mx-auto rounded-sm overflow-hidden flex flex-col md:flex-row text-left"
-      style={{ minHeight: "1056px", backgroundColor: "#ffffff" }}
+      className="w-full max-w-[794px] bg-white text-zinc-800 font-sans p-0 shadow-xl mx-auto rounded-sm overflow-hidden select-text text-left"
+      style={{
+        width: "100%",
+        maxWidth: "794px",
+        minHeight: "1123px",
+        height: "100%",
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "stretch",
+        backgroundColor: "#ffffff",
+        boxSizing: "border-box",
+        position: "relative",
+      }}
     >
-      {/* SIDEBAR */}
-      <div className="w-full md:w-1/3 bg-slate-900 text-white p-6 flex flex-col justify-between">
+      {/* SIDEBAR (32% width) */}
+      <div
+        style={{
+          width: "32%",
+          backgroundColor: "#0f172a",
+          color: "#ffffff",
+          padding: "32px 20px",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          boxSizing: "border-box",
+          flexShrink: 0,
+          minHeight: "1123px",
+          alignSelf: "stretch",
+        }}
+      >
         <div>
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-white mb-1">{personalInfo.name}</h2>
-            {jobTitle && <p className="text-xs text-indigo-300 font-semibold uppercase">{jobTitle}</p>}
+          <div style={{ marginBottom: "24px" }}>
+            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#ffffff", marginBottom: "4px", lineHeight: "1.2", wordBreak: "break-word" }}>
+              {personalInfo.name || "Your Name"}
+            </h2>
+            {jobTitle && (
+              <p style={{ fontSize: "11px", fontWeight: "700", color: "#93c5fd", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>
+                {jobTitle}
+              </p>
+            )}
           </div>
 
-          <div className="space-y-3 text-xs text-slate-300 mb-6 border-t border-slate-700 pt-4">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Contact</h3>
-            {visibility.showEmail !== false && personalInfo.email && <div>📧 {personalInfo.email}</div>}
-            {visibility.showPhone !== false && personalInfo.phone && <div>📱 {personalInfo.phone}</div>}
-            {visibility.showAddress !== false && personalInfo.address && <div>📍 {personalInfo.address}</div>}
+          <div style={{ marginBottom: "24px", borderTop: "1px solid #334155", paddingTop: "16px" }}>
+            <h3 style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.1em", color: "#94a3b8", marginBottom: "12px" }}>
+              Contact
+            </h3>
+            <div style={{ fontSize: "12px", color: "#cbd5e1", lineHeight: "1.6" }}>
+              {visibility.showEmail !== false && personalInfo.email && <div style={{ marginBottom: "6px", wordBreak: "break-all" }}>📧 {personalInfo.email}</div>}
+              {visibility.showPhone !== false && personalInfo.phone && <div style={{ marginBottom: "6px" }}>📱 {personalInfo.phone}</div>}
+              {visibility.showAddress !== false && personalInfo.address && <div style={{ whiteSpace: "pre-line" }}>📍 {personalInfo.address}</div>}
+            </div>
           </div>
 
           {visibility.showSkills !== false && skills && skills.length > 0 && (
-            <div className="mb-6 border-t border-slate-700 pt-4">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Skills</h3>
-              <div className="flex flex-wrap gap-2">
+            <div style={{ marginBottom: "24px", borderTop: "1px solid #334155", paddingTop: "16px" }}>
+              <h3 style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.1em", color: "#94a3b8", marginBottom: "12px" }}>
+                Skills
+              </h3>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                 {skills.map((skill, i) => (
                   <span
                     key={i}
@@ -395,19 +578,18 @@ const ModernTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
                       display: "inline-flex",
                       alignItems: "center",
                       backgroundColor: "#1e293b",
-                      color: "#e2e8f0",
+                      color: "#f1f5f9",
                       fontSize: "11px",
                       fontWeight: "600",
                       padding: "5px 12px",
                       borderRadius: "6px",
-                      lineHeight: "1",
-                      whiteSpace: "nowrap",
+                      lineHeight: "1.3",
                       boxSizing: "border-box",
+                      letterSpacing: "0.02em",
+                      wordSpacing: "0.1em",
                     }}
                   >
-                    <span style={{ display: "inline-block", lineHeight: "1", transform: "translateY(-3px)" }}>
-                      {skill}
-                    </span>
+                    {formatSkillName(skill)}
                   </span>
                 ))}
               </div>
@@ -415,58 +597,74 @@ const ModernTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
           )}
 
           {visibility.showPersonalSection !== false && (
-            <div className="border-t border-slate-700 pt-4 text-xs text-slate-300 space-y-1.5">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Personal</h3>
-              {visibility.showFatherName !== false && personalInfo.fatherName && <div><span className="text-slate-400">Father:</span> {personalInfo.fatherName}</div>}
-              {visibility.showDob !== false && personalInfo.dob && <div><span className="text-slate-400">DOB:</span> {personalInfo.dob}</div>}
-              {visibility.showLanguages !== false && personalInfo.languages && <div><span className="text-slate-400">Languages:</span> {personalInfo.languages}</div>}
+            <div style={{ borderTop: "1px solid #334155", paddingTop: "16px", fontSize: "12px", color: "#cbd5e1" }}>
+              <h3 style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.1em", color: "#94a3b8", marginBottom: "12px" }}>
+                Personal
+              </h3>
+              {visibility.showFatherName !== false && personalInfo.fatherName && <div style={{ marginBottom: "6px" }}><span style={{ color: "#94a3b8" }}>Father:</span> {personalInfo.fatherName}</div>}
+              {visibility.showDob !== false && personalInfo.dob && <div style={{ marginBottom: "6px" }}><span style={{ color: "#94a3b8" }}>DOB:</span> {personalInfo.dob}</div>}
+              {visibility.showLanguages !== false && personalInfo.languages && <div style={{ marginBottom: "6px" }}><span style={{ color: "#94a3b8" }}>Languages:</span> {personalInfo.languages}</div>}
+              {visibility.showGender !== false && personalInfo.gender && <div style={{ marginBottom: "6px" }}><span style={{ color: "#94a3b8" }}>Gender:</span> {personalInfo.gender}</div>}
+              {visibility.showNationality !== false && personalInfo.nationality && <div style={{ marginBottom: "6px" }}><span style={{ color: "#94a3b8" }}>Nationality:</span> {personalInfo.nationality}</div>}
+              {visibility.showMaritalStatus !== false && personalInfo.maritalStatus && <div style={{ marginBottom: "6px" }}><span style={{ color: "#94a3b8" }}>Marital:</span> {personalInfo.maritalStatus}</div>}
             </div>
           )}
         </div>
 
-        {visibility.showDatePlace !== false && (
-          <div className="text-[10px] text-slate-500 pt-4 border-t border-slate-800">
-            Date: {personalInfo.date} | Place: {personalInfo.place}
+        {visibility.showDatePlace !== false && (personalInfo.date || personalInfo.place) && (
+          <div style={{ fontSize: "10px", color: "#64748b", paddingTop: "16px", borderTop: "1px solid #1e293b", marginTop: "16px" }}>
+            Date: {personalInfo.date} {personalInfo.date && personalInfo.place ? "|" : ""} Place: {personalInfo.place}
           </div>
         )}
       </div>
 
-      {/* MAIN CONTENT */}
-      <div className="w-full md:w-2/3 p-6 flex flex-col justify-between">
+      {/* MAIN CONTENT (68% width) */}
+      <div
+        style={{
+          width: "68%",
+          padding: "32px 28px",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          boxSizing: "border-box",
+          minHeight: "1123px",
+          alignSelf: "stretch",
+        }}
+      >
         <div>
           {visibility.showObjective !== false && objective && (
-            <div className="mb-5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 border-b-2 border-indigo-600 pb-1 mb-2">
-                Summary & Objective
+            <div style={{ marginBottom: "24px" }}>
+              <h3 style={{ fontSize: "12px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.08em", color: "#4f46e5", borderBottom: "2px solid #4f46e5", paddingBottom: "4px", marginBottom: "8px" }}>
+                Summary &amp; Objective
               </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <p style={{ fontSize: "12px", color: "#334155", lineHeight: "1.6", margin: 0 }}>
                 {objective}
               </p>
             </div>
           )}
 
           {visibility.showEducation !== false && education && education.length > 0 && (
-            <div className="mb-5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 border-b-2 border-indigo-600 pb-1 mb-3">
+            <div style={{ marginBottom: "24px" }}>
+              <h3 style={{ fontSize: "12px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.08em", color: "#4f46e5", borderBottom: "2px solid #4f46e5", paddingBottom: "4px", marginBottom: "12px" }}>
                 Education
               </h3>
-              <div className="space-y-2">
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {education.map((edu, idx) => (
-                  <div key={idx} className="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100 text-xs">
+                  <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#f8fafc", padding: "10px 14px", borderRadius: "6px", border: "1px solid #e2e8f0", fontSize: "12px" }}>
                     <div>
-                      <div className="font-bold text-slate-900">{edu.qualification}</div>
-                      <div className="text-slate-500 text-[11px]">{edu.board}</div>
+                      <div style={{ fontWeight: "800", color: "#0f172a" }}>{edu.qualification}</div>
+                      <div style={{ color: "#64748b", fontSize: "11px" }}>{edu.board}</div>
                     </div>
-                    <div className="text-right">
+                    <div style={{ textAlign: "right" }}>
                       {edu.isPursuing ? (
                         <>
-                          <div className="font-semibold text-amber-600">Pursuing</div>
-                          {edu.year && <div className="text-slate-400 text-[10px]">Exp. {edu.year}</div>}
+                          <div style={{ fontWeight: "700", color: "#d97706" }}>Pursuing</div>
+                          {edu.year && <div style={{ color: "#94a3b8", fontSize: "10px" }}>Exp. {edu.year}</div>}
                         </>
                       ) : (
                         <>
-                          <div className="font-semibold text-slate-700">{edu.percentage ? (edu.percentage.endsWith("%") ? edu.percentage : `${edu.percentage}%`) : ""}</div>
-                          <div className="text-slate-400 text-[10px]">{edu.year}</div>
+                          <div style={{ fontWeight: "700", color: "#0f172a" }}>{edu.percentage ? (edu.percentage.endsWith("%") ? edu.percentage : `${edu.percentage}%`) : ""}</div>
+                          <div style={{ color: "#64748b", fontSize: "10px" }}>{edu.year}</div>
                         </>
                       )}
                     </div>
@@ -477,18 +675,18 @@ const ModernTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
           )}
 
           {visibility.showExperience !== false && experience && experience.length > 0 && (
-            <div className="mb-5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 border-b-2 border-indigo-600 pb-1 mb-3">
+            <div style={{ marginBottom: "24px" }}>
+              <h3 style={{ fontSize: "12px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.08em", color: "#4f46e5", borderBottom: "2px solid #4f46e5", paddingBottom: "4px", marginBottom: "12px" }}>
                 Work Experience
               </h3>
-              <div className="space-y-3">
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {experience.map((exp, idx) => (
-                  <div key={idx} className="border-l-2 border-slate-200 pl-3">
-                    {exp.company && <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide">{exp.company}</h4>}
-                    {exp.title && <div className="text-xs font-semibold text-indigo-600">{exp.title}</div>}
-                    {exp.duration && <div className="text-[11px] text-slate-500 font-medium">{exp.duration}</div>}
+                  <div key={idx} style={{ borderLeft: "2px solid #cbd5e1", paddingLeft: "14px" }}>
+                    {exp.company && <h4 style={{ fontSize: "13px", fontWeight: "800", color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.03em", margin: "0 0 2px 0" }}>{exp.company}</h4>}
+                    {exp.title && <div style={{ fontSize: "12px", fontWeight: "700", color: "#4f46e5", marginBottom: "2px" }}>{exp.title}</div>}
+                    {exp.duration && <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "600", marginBottom: "4px" }}>{exp.duration}</div>}
                     {exp.details && (
-                      <p className="text-xs text-slate-600 whitespace-pre-line leading-relaxed mt-0.5">
+                      <p style={{ fontSize: "12px", color: "#334155", whiteSpace: "pre-line", lineHeight: "1.6", margin: "4px 0 0 0" }}>
                         {exp.details}
                       </p>
                     )}
@@ -499,11 +697,11 @@ const ModernTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
           )}
 
           {customSections.map((sec) => (
-            <div key={sec.id} className="mb-5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 border-b-2 border-indigo-600 pb-1 mb-2">
+            <div key={sec.id} style={{ marginBottom: "24px" }}>
+              <h3 style={{ fontSize: "12px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.08em", color: "#4f46e5", borderBottom: "2px solid #4f46e5", paddingBottom: "4px", marginBottom: "8px" }}>
                 {sec.title}
               </h3>
-              <p className="text-xs text-slate-600 whitespace-pre-line leading-relaxed">
+              <p style={{ fontSize: "12px", color: "#334155", whiteSpace: "pre-line", lineHeight: "1.6", margin: 0 }}>
                 {sec.content}
               </p>
             </div>
@@ -511,8 +709,8 @@ const ModernTemplate: React.FC<{ data: IResumeData }> = ({ data }) => {
         </div>
 
         {visibility.showSignature !== false && (
-          <div className="pt-4 border-t border-slate-100 flex justify-end items-end text-xs text-slate-500">
-            <div>({personalInfo.name})</div>
+          <div style={{ paddingTop: "16px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "flex-end", alignItems: "flex-end", fontSize: "12px", color: "#64748b" }}>
+            <div style={{ fontWeight: "800", color: "#0f172a" }}>({personalInfo.name})</div>
           </div>
         )}
       </div>
