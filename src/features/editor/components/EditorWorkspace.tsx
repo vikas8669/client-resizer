@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import apiClient from '@/api/api';
 import { ENDPOINTS, SERVER_BASE_URL } from '@/api/endpoints';
-import { Download, RefreshCw, LayoutTemplate, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Lock, Unlock, Link, Link2, Ratio, Maximize, Scissors, AlertCircle, ZoomIn, ZoomOut, FileType, CheckCircle2, UserCircle, PenTool, Image as ImageIcon, Train } from 'lucide-react';
+import { Download, RefreshCw, LayoutTemplate, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Lock, Unlock, Link, Link2, Ratio, Maximize, Scissors, AlertCircle, ZoomIn, ZoomOut, FileType, CheckCircle2, UserCircle, PenTool, Image as ImageIcon, Train, Plus, Minus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
@@ -50,6 +50,7 @@ const GOVT_PRESETS: PresetGroup[] = [
     icon: <UserCircle className="w-4 h-4" />,
     items: [
       { name: 'SSC/UPSC Photo', width: 200, height: 230, targetKB: 50, desc: 'Common Govt Exam size' },
+      { name: 'BPSC Photo', width: 200, height: 290, targetKB: 20, desc: 'Common Govt Exam size' },
       { name: 'Standard (3.5x4.5cm)', width: 413, height: 531, targetKB: 100, desc: 'Passport/Aadhaar' },
       { name: 'IBPS Photo', width: 300, height: 300, targetKB: 50, desc: 'Banking Exams' },
       { name: 'Digital (2x2 inch)', width: 600, height: 600, targetKB: 200, desc: 'US Visa / Digital ID' },
@@ -86,12 +87,15 @@ const GOVT_PRESETS: PresetGroup[] = [
 
 
 const PRINT_LAYOUTS = [
+  { name: '4 Copies', count: 4 },
   { name: '8 Copies', count: 8 },
   { name: '16 Copies', count: 16 },
   { name: '32 Copies', count: 32 },
   { name: '52 Copies', count: 52 },
 ];
 const PASSPORT_PRINT_GAP_MM = 2;
+const MIN_PRINT_COPIES = 1;
+const MAX_PRINT_COPIES = 52;
 const MIN_DIMENSION = 100;
 const MAX_DIMENSION = 3000;
 const DIMENSION_STEP = 10;
@@ -129,6 +133,7 @@ export function EditorWorkspace() {
   const [activeTask, setActiveTask] = useState<'process' | 'remove-bg' | 'print' | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [processPercentage, setProcessPercentage] = useState(0);
+  const [printCopyCount, setPrintCopyCount] = useState(4);
 
   
   const [isLimitDialogOpen, setIsLimitDialogOpen] = useState(false);
@@ -314,6 +319,8 @@ export function EditorWorkspace() {
 
   const handlePrintLayout = async (layoutCount: number) => {
     if (!originalFile) return;
+
+    const requestedCopies = Math.max(MIN_PRINT_COPIES, Math.min(MAX_PRINT_COPIES, Math.floor(layoutCount)));
     
     setActiveTask('print');
     setIsProcessing(true);
@@ -338,7 +345,7 @@ export function EditorWorkspace() {
 
       const printRes = await apiClient.post(ENDPOINTS.PRINT_LAYOUT, {
         images: [imagePath],
-        type: layoutCount,
+        type: requestedCopies,
         gapMm: PASSPORT_PRINT_GAP_MM,
       });
 
@@ -349,8 +356,9 @@ export function EditorWorkspace() {
       }
       setProcessPercentage(100);
       setPrintLayoutUrl(fullUrl);
+      setPrintCopyCount(requestedCopies);
 
-      toast.success(`A4 layout for ${layoutCount} passport-size copies generated!`);
+      toast.success(`A4 layout for ${requestedCopies} passport-size copies generated!`);
 
     } catch (error: any) {
       console.error('Print layout failed', error);
@@ -499,6 +507,10 @@ export function EditorWorkspace() {
     const ratio = (sizeInBytes / originalFile.size);
     const newQuality = Math.round(Math.max(20, Math.min(100, Math.pow(ratio, 0.45) * 100)));
     updateSettings({ quality: newQuality });
+  };
+
+  const updatePrintCopyCount = (nextCount: number) => {
+    setPrintCopyCount(Math.max(MIN_PRINT_COPIES, Math.min(MAX_PRINT_COPIES, nextCount)));
   };
 
   if (!originalImageUrl) {
@@ -1254,13 +1266,57 @@ export function EditorWorkspace() {
                 <Button 
                   key={layout.count} 
                   variant="outline" 
-                  className="rounded-xl border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:bg-white/5 text-zinc-900 dark:text-white"
-                  onClick={() => handlePrintLayout(layout.count)}
+                  className={cn(
+                    "rounded-xl border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:bg-white/5 text-zinc-900 dark:text-white",
+                    printCopyCount === layout.count && "border-primary/50 bg-primary/5 text-primary"
+                  )}
+                  onClick={() => {
+                    updatePrintCopyCount(layout.count);
+                    handlePrintLayout(layout.count);
+                  }}
                   disabled={isProcessing}
                 >
                   <LayoutTemplate className="w-4 h-4 mr-2 text-zinc-400" /> {layout.name}
                 </Button>
               ))}
+            </div>
+
+            <div className="mt-4 flex flex-col sm:flex-row gap-3">
+              <div className="flex items-center justify-between rounded-xl border border-zinc-200 dark:border-white/10 overflow-hidden sm:w-40">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11 rounded-none text-zinc-600 dark:text-zinc-300"
+                  onClick={() => updatePrintCopyCount(printCopyCount - 1)}
+                  disabled={isProcessing || printCopyCount <= MIN_PRINT_COPIES}
+                  aria-label="Decrease print copies"
+                >
+                  <Minus className="w-4 h-4" />
+                </Button>
+                <span className="min-w-12 text-center text-sm font-bold text-zinc-900 dark:text-white">
+                  {printCopyCount}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11 rounded-none text-zinc-600 dark:text-zinc-300"
+                  onClick={() => updatePrintCopyCount(printCopyCount + 1)}
+                  disabled={isProcessing || printCopyCount >= MAX_PRINT_COPIES}
+                  aria-label="Increase print copies"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              <Button
+                type="button"
+                className="h-11 flex-1 rounded-xl font-semibold"
+                onClick={() => handlePrintLayout(printCopyCount)}
+                disabled={isProcessing}
+              >
+                Generate {printCopyCount} {printCopyCount === 1 ? 'Copy' : 'Copies'}
+              </Button>
             </div>
 
           </div>
