@@ -43,3 +43,16 @@ next-env.d.ts
 *.uploads/
 uploads/
 uploads/*
+
+# Test files and folders
+test/
+tests/
+__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Test coverage
+coverage/
+.nyc_output/

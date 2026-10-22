@@ -10,6 +10,7 @@ import {
   Settings, 
   Users, 
   Image as ImageIcon,
+  Scissors,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -22,6 +23,7 @@ import { useRouter } from 'next/navigation';
 
 const NAV_ITEMS = [
   { name: 'Dashboard', icon: LayoutDashboard, href: '/admin' },
+  { name: 'E-Card Cutter', icon: Scissors, href: '/admin/ecard' },
   { name: 'Suggestions', icon: MessageSquare, href: '/admin?tab=suggestions' },
   { name: 'Feedback', icon: Star, href: '/admin?tab=feedback' },
   { name: 'Processed Images', icon: ImageIcon, href: '/admin/images' },

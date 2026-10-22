@@ -1,6 +1,6 @@
 
 
-export const SERVER_BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000';      
+export const SERVER_BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:8000';      
 export const API_BASE_URL = SERVER_BASE_URL;
 
 export const ENDPOINTS = {
@@ -8,6 +8,11 @@ export const ENDPOINTS = {
   PROCESS: '/api/images/process',
   REMOVE_BG: '/api/images/remove-bg',
   PRINT_LAYOUT: '/api/print/generate',
+  ECARD_PDF: '/api/print/ecard-pdf',
+  ECARD_STATUS: '/api/ecard/status',
+  ECARD_ORDER: '/api/ecard/subscribe/order',
+  ECARD_VERIFY: '/api/ecard/subscribe/verify',
+  ECARD_ADMIN_SETTINGS: '/api/ecard/admin/settings',
   LOGIN: '/api/auth/login',
   GOOGLE_LOGIN: '/api/auth/google',
   SIGNUP: '/api/auth/signup',
