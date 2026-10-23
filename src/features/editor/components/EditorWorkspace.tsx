@@ -525,6 +525,14 @@ export function EditorWorkspace() {
     setPrintCopyCount(Math.max(MIN_PRINT_COPIES, Math.min(MAX_PRINT_COPIES, nextCount)));
   };
 
+  const handleStepPrintCopies = (delta: number) => {
+    const next = Math.max(MIN_PRINT_COPIES, Math.min(MAX_PRINT_COPIES, printCopyCount + delta));
+    if (next !== printCopyCount) {
+      updatePrintCopyCount(next);
+      handlePrintLayout(next);
+    }
+  };
+
   if (!originalImageUrl) {
     return (
       <div className="max-w-6xl mx-auto w-full mt-12 mb-20 px-4 lg:px-8">
@@ -797,6 +805,7 @@ export function EditorWorkspace() {
               </div>
             ) : (
               <iframe
+                key={printLayoutUrl}
                 title="Print Layout PDF"
                 src={printLayoutUrl}
                 className="w-full h-[500px] mx-auto mb-8 border border-zinc-200 shadow-lg rounded-xl bg-white"
@@ -1311,21 +1320,21 @@ export function EditorWorkspace() {
                       variant="ghost"
                       size="icon"
                       className="h-9 w-9 rounded-none text-zinc-600 dark:text-zinc-300"
-                      onClick={() => updatePrintCopyCount(printCopyCount - 1)}
+                      onClick={() => handleStepPrintCopies(-1)}
                       disabled={isProcessing || printCopyCount <= MIN_PRINT_COPIES}
                       aria-label="Decrease print copies"
                     >
                       <Minus className="w-3.5 h-3.5" />
                     </Button>
                     <span className="text-xs font-bold text-zinc-900 dark:text-white">
-                      {printCopyCount} copies
+                      {printCopyCount} {printCopyCount === 1 ? 'copy' : 'copies'}
                     </span>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
                       className="h-9 w-9 rounded-none text-zinc-600 dark:text-zinc-300"
-                      onClick={() => updatePrintCopyCount(printCopyCount + 1)}
+                      onClick={() => handleStepPrintCopies(1)}
                       disabled={isProcessing || printCopyCount >= MAX_PRINT_COPIES}
                       aria-label="Increase print copies"
                     >
@@ -1345,119 +1354,69 @@ export function EditorWorkspace() {
             </TabsContent>
           </div>
         </Tabs>
+        {/* Sticky Action Footer */}
+        <div className="p-4 border-t border-zinc-100 dark:border-white/5 bg-zinc-50/70 dark:bg-zinc-900/50 space-y-2 mt-auto">
+          <Button
+            className={cn(
+              "w-full h-11 rounded-xl font-semibold transition-all text-xs",
+              hasPendingChanges
+                ? "bg-primary text-white shadow-[0_4px_14px_0_rgba(34,98,199,0.39)] hover:shadow-[0_6px_20px_rgba(34,98,199,0.23)] hover:-translate-y-0.5 animate-pulse"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border border-zinc-200 dark:border-white/10"
+            )}
+            onClick={handleProcess}
+            disabled={isProcessing}
+          >
+            {isProcessing ? "Processing Image..." : hasPendingChanges ? "Apply Changes & Preview" : "Settings Applied"}
+          </Button>
 
-          <div className="mt-6 pt-6 border-t border-zinc-100 dark:border-white/10 space-y-4">
-
+          <div className="grid grid-cols-2 gap-2">
             <Button
-              className={cn(
-                "w-full h-12 rounded-xl font-semibold transition-all",
-                hasPendingChanges
-                  ? "bg-primary text-white shadow-[0_4px_14px_0_rgba(34,98,199,0.39)] hover:shadow-[0_6px_20_rgba(34,98,199,0.23)] hover:-translate-y-0.5"
-                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border border-zinc-200 dark:border-white/10"
-              )}
-              onClick={handleProcess}
-              disabled={isProcessing}
-            >
-              {isProcessing ? 'Processing...' : hasPendingChanges ? 'Apply Changes & Preview' : 'Settings Applied'}
-            </Button>
-
-
-            <Button
+              type="button"
               variant="outline"
-              className="w-full h-12 rounded-xl font-semibold border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 text-zinc-900 dark:text-white transition-colors"
+              size="sm"
+              className="h-9 rounded-xl font-medium border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 text-xs text-zinc-800 dark:text-zinc-200"
               onClick={handleRemoveBackground}
               disabled={isProcessing}
             >
-              Remove Background
+              <Sparkles className="w-3.5 h-3.5 mr-1.5 text-primary" /> Remove BG
             </Button>
 
+            {processedImageUrl ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSingleDownload}
+                className="h-9 rounded-xl font-semibold bg-emerald-600 hover:bg-emerald-700 text-white text-xs shadow-xs"
+              >
+                <Download className="w-3.5 h-3.5 mr-1.5" /> Download
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs"
+                onClick={handleStartOver}
+              >
+                <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Start Over
+              </Button>
+            )}
+          </div>
 
+          <div className="flex items-center justify-between pt-1 text-[10px] text-zinc-400">
+            <span>Free limit: 20 edits/day</span>
             {processedImageUrl && (
               <button
                 type="button"
-                onClick={handleSingleDownload}
-                className={cn(
-                  buttonVariants({ variant: "outline" }),
-                  "w-full h-12 rounded-xl font-semibold border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 text-zinc-900 dark:text-white transition-colors"
-                )}
+                onClick={handleStartOver}
+                className="text-zinc-400 hover:text-primary transition-colors underline"
               >
-                <Download className="w-4 h-4 mr-2" /> Download Single Image
+                New photo
               </button>
             )}
-
-          </div>
-
-          <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-white/10">
-            <Label className="font-semibold text-zinc-900 dark:text-white block mb-2">Generate Print Layout (A4)</Label>
-            <p className="text-xs text-zinc-500 mb-4">Real passport size: 35mm x 45mm</p>
-            <div className="grid grid-cols-2 gap-3">
-              {PRINT_LAYOUTS.map((layout) => (
-                <Button
-                  key={layout.count}
-                  variant="outline"
-                  className={cn(
-                    "rounded-xl border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:bg-white/5 text-zinc-900 dark:text-white",
-                    printCopyCount === layout.count && "border-primary/50 bg-primary/5 text-primary"
-                  )}
-                  onClick={() => {
-                    updatePrintCopyCount(layout.count);
-                    handlePrintLayout(layout.count);
-                  }}
-                  disabled={isProcessing}
-                >
-                  <LayoutTemplate className="w-4 h-4 mr-2 text-zinc-400" /> {layout.name}
-                </Button>
-              ))}
-            </div>
-
-            <div className="mt-4 flex flex-col sm:flex-row gap-3">
-              <div className="flex items-center justify-between rounded-xl border border-zinc-200 dark:border-white/10 overflow-hidden sm:w-40">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-11 w-11 rounded-none text-zinc-600 dark:text-zinc-300"
-                  onClick={() => updatePrintCopyCount(printCopyCount - 1)}
-                  disabled={isProcessing || printCopyCount <= MIN_PRINT_COPIES}
-                  aria-label="Decrease print copies"
-                >
-                  <Minus className="w-4 h-4" />
-                </Button>
-                <span className="min-w-12 text-center text-sm font-bold text-zinc-900 dark:text-white">
-                  {printCopyCount}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-11 w-11 rounded-none text-zinc-600 dark:text-zinc-300"
-                  onClick={() => updatePrintCopyCount(printCopyCount + 1)}
-                  disabled={isProcessing || printCopyCount >= MAX_PRINT_COPIES}
-                  aria-label="Increase print copies"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-              <Button
-                type="button"
-                className="h-11 flex-1 rounded-xl font-semibold"
-                onClick={() => handlePrintLayout(printCopyCount)}
-                disabled={isProcessing}
-              >
-                Generate {printCopyCount} {printCopyCount === 1 ? 'Copy' : 'Copies'}
-              </Button>
-            </div>
-
           </div>
         </div>
-
-        <div className="mt-auto p-6 bg-zinc-50/50 dark:bg-white/5 border-t border-zinc-100 dark:border-white/5">
-          <Button variant="ghost" className="w-full text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-white/5 rounded-xl transition-all" onClick={handleStartOver}>
-            <RefreshCw className="w-4 h-4 mr-2" /> Start Over with New Image
-          </Button>
-        </div>
-
-      {/* </div> */}
+      </div>
       {/* Rate Limit Dialog */}
       <Dialog open={isLimitDialogOpen} onOpenChange={setIsLimitDialogOpen}>
         <DialogContent className="sm:max-w-md bg-white dark:bg-zinc-900 border-none shadow-2xl">

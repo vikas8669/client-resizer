@@ -23,6 +23,18 @@ export default function PricingSection() {
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [activePlanId, setActivePlanId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const pricingPageSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: 'E-Card Cutter Pricing',
+    description: 'Current E-Card Cutter subscription plans and prices from PrintPix.',
+    url: 'https://printpix.app/pricing',
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'PrintPix',
+      url: 'https://printpix.app',
+    },
+  };
 
   useEffect(() => {
     const loadPlans = async () => {
@@ -43,6 +55,10 @@ export default function PricingSection() {
 
   return (
     <main className="min-h-screen bg-white px-6 py-16 text-gray-900 dark:bg-black dark:text-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(pricingPageSchema) }}
+      />
       <section className="mx-auto max-w-6xl text-center">
         <h1 className="text-4xl font-bold md:text-5xl">E-Card Cutter Pricing</h1>
         <p className="mx-auto mt-4 max-w-2xl text-gray-600 dark:text-gray-300">

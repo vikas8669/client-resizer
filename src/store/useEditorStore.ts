@@ -10,6 +10,7 @@ export interface EditorSettings {
   focalY: number;
   zoom: number;
   lockAspectRatio: boolean;
+  rotate: number;
 }
 
 export interface CropState {
@@ -46,6 +47,7 @@ const defaultSettings: EditorSettings = {
   focalY: 0,
   zoom: 1,
   lockAspectRatio: true,
+  rotate: 0,
 };
 
 export const useEditorStore = create<EditorState>((set) => ({

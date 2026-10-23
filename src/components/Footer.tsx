@@ -62,7 +62,8 @@ export function Footer() {
                 Product
               </h3>
               <ul className="space-y-2 text-sm">
-                <li>Features</li>
+                <Link href="/product" className="hover:text-blue-500 transition ease-in hover:underline">Features</Link>
+                {/* <li onClick={() => ""}></li> */}
                 <li>Editor</li>
               </ul>
             </div>
@@ -107,7 +108,7 @@ export function Footer() {
           </p>
 
           {/* RIGHT LOGO (YOUR REQUEST ✅) */}
-          <div className="opacity-80 hover:opacity-100 transition">
+          <div className="opacity-100 hover:opacity-100 transition">
             <Logo />
           </div>
         </div>
