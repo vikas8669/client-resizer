@@ -15,17 +15,7 @@ export default function ForgotPasswordPage() {
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const response = await apiClient.post(ENDPOINTS.FORGOT_PASSWORD, { email });
-      toast.success(response.data?.message || "Reset link sent");
-      setIsSent(true);
-    } catch (error: any) {
-      const message = error.response?.data?.message || "Failed to process request";
-      toast.error(message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    toast.info("This feature is coming soon!");
   };
 
   return (

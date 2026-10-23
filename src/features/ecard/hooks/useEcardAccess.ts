@@ -37,6 +37,8 @@ export interface EcardAccessResponse {
     startDate: string;
     expiryDate: string;
     durationMonths: number;
+    amountRupees?: number;
+    status?: string;
   } | null;
   canCut: boolean;
   isAdmin: boolean;
@@ -111,6 +113,8 @@ export function useEcardAccess() {
         return;
       }
 
+      let checkoutOpened = false;
+
       try {
         setIsCheckingPayment(true);
 
@@ -182,19 +186,29 @@ export function useEcardAccess() {
               } else {
                 toast.error(errMsg || 'Payment verification failed', { id: 'payment-verify' });
               }
+            } finally {
+              setIsCheckingPayment(false);
             }
           },
           modal: {
             ondismiss: () => {
               toast.info('Payment checkout cancelled');
+              setIsCheckingPayment(false);
             },
           },
         });
+        // Opening Checkout is synchronous after the SDK is loaded. Keep the
+        // purchase controls locked until it is dismissed or verification ends.
+        checkoutOpened = true;
       } catch (err: any) {
         console.error('Subscription error:', err);
         toast.error(err?.response?.data?.message || err?.message || 'Could not initiate payment');
       } finally {
-        setIsCheckingPayment(false);
+        // Do not unlock immediately after Razorpay Checkout opens; doing so
+        // permits another order to be started while the first is still active.
+        if (!checkoutOpened) {
+          setIsCheckingPayment(false);
+        }
       }
     },
     [isLoggedIn, isCheckingPayment, currentUser, queryClient, refetch]

@@ -1,105 +1,109 @@
 'use client';
 
-import { motion } from "framer-motion";
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import apiClient from '@/api/api';
+import { ENDPOINTS } from '@/api/endpoints';
+import type { FormattedPlan } from '@/features/ecard/hooks/useEcardAccess';
+
+interface PricingResponse {
+  plans: FormattedPlan[];
+  paymentEnabled: boolean;
+  hasActiveSubscription: boolean;
+  subscription?: {
+    planId: string;
+    expiryDate: string;
+  } | null;
+}
 
 export default function PricingSection() {
-  return (
-    <div className="relative min-h-screen bg-white  text-gray-900 dark:text-white px-6 py-16 overflow-hidden">
-      {/* Background Gradient */}
-      <div className="absolute inset-0 dark:bg-black" />
+  const [plans, setPlans] = useState<FormattedPlan[]>([]);
+  const [paymentEnabled, setPaymentEnabled] = useState(true);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-      <div className="relative max-w-6xl mx-auto text-center">
-        <h1 className="text-4xl md:text-5xl font-bold mb-4">
-          Simple & Transparent Pricing
-        </h1>
-        <p className="text-gray-600 dark:text-gray-300 mb-12 max-w-2xl mx-auto">
-          Start free today and scale as your business grows. No hidden charges.
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        const { data } = await apiClient.get<PricingResponse>(ENDPOINTS.ECARD_STATUS);
+        setPlans(data.plans || []);
+        setPaymentEnabled(data.paymentEnabled);
+        setHasActiveSubscription(data.hasActiveSubscription);
+        setActivePlanId(data.subscription?.planId || null);
+      } catch (error) {
+        console.error('Unable to load subscription pricing:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadPlans();
+  }, []);
+
+  return (
+    <main className="min-h-screen bg-white px-6 py-16 text-gray-900 dark:bg-black dark:text-white">
+      <section className="mx-auto max-w-6xl text-center">
+        <h1 className="text-4xl font-bold md:text-5xl">E-Card Cutter Pricing</h1>
+        <p className="mx-auto mt-4 max-w-2xl text-gray-600 dark:text-gray-300">
+          Choose a plan below. These prices are managed by the administrator and match Razorpay checkout.
         </p>
 
-        {/* Cards */}
-        <div className="grid md:grid-cols-3 gap-8">
+        {!paymentEnabled && !isLoading && (
+          <p className="mx-auto mt-6 max-w-xl rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+            Payments are currently disabled. E-Card Cutter access is available without a subscription.
+          </p>
+        )}
 
-          {/* Free Plan */}
-          <motion.div whileHover={{ y: -10 }} className="p-8 rounded-2xl shadow-xl border dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur">
-            <h2 className="text-2xl font-semibold mb-4">Free</h2>
-            <p className="text-4xl font-bold mb-4">₹0</p>
-            <p className="mb-6 text-sm text-gray-500">Best for beginners</p>
-            <ul className="space-y-2 mb-6 text-sm">
-              <li>✔ Basic Features</li>
-              <li>✔ Limited Usage</li>
-              <li>✔ Community Support</li>
-            </ul>
-            <button className="w-full py-2 rounded-lg bg-black text-white dark:bg-white dark:text-black hover:opacity-90">
-              Get Started
-            </button>
-          </motion.div>
+        {hasActiveSubscription && !isLoading && (
+          <p className="mx-auto mt-6 max-w-xl rounded-xl bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+            You already have an active subscription. You can continue using E-Card Cutter without purchasing another plan.
+          </p>
+        )}
 
-          {/* Pro Plan */}
-          <motion.div whileHover={{ scale: 1.05 }} className="p-8 rounded-2xl shadow-2xl border-2 border-blue-500 bg-gradient-to-b from-blue-50 to-white dark:from-gray-800 dark:to-gray-900">
-            <h2 className="text-2xl font-semibold mb-4">Pro</h2>
-            <p className="text-4xl font-bold mb-4">₹499/mo</p>
-            <p className="mb-6 text-sm text-gray-500">For professionals</p>
-            <ul className="space-y-2 mb-6 text-sm">
-              <li>✔ All Free Features</li>
-              <li>✔ Unlimited Usage</li>
-              <li>✔ Priority Support</li>
-            </ul>
-            <button className="w-full py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
-               Coming Soon
-            </button>
-          </motion.div>
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
+          {isLoading && Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="h-96 animate-pulse rounded-2xl border bg-gray-100 dark:border-gray-800 dark:bg-gray-900" />
+          ))}
 
-          {/* Future Plan */}
-          <motion.div whileHover={{ y: -10 }} className="p-8 rounded-2xl shadow-xl border border-dashed dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur">
-            <h2 className="text-2xl font-semibold mb-4">Future Plan</h2>
-            <p className="text-lg font-medium mb-4 text-yellow-500">Currently Free</p>
-            <p className="mb-6 text-sm text-gray-500">
-              This plan will become paid next year. Lock your access now.
-            </p>
-            <ul className="space-y-2 mb-6 text-sm">
-              <li>✔ Premium Features</li>
-              <li>✔ Early Access</li>
-              <li>✔ Future Updates</li>
-            </ul>
-            <button className="w-full py-2 rounded-lg bg-yellow-500 text-white hover:bg-yellow-600">
-              Coming Soon
-            </button>
-          </motion.div>
+          {!isLoading && plans.map((plan) => {
+            const isActivePlan = activePlanId === plan.id;
+
+            return (
+            <motion.article key={plan.id} whileHover={{ y: -6 }} className={`relative flex flex-col rounded-2xl border bg-white p-7 text-left shadow-lg dark:bg-gray-900 ${isActivePlan ? 'border-2 border-blue-600 ring-4 ring-blue-100 dark:border-blue-400 dark:ring-blue-950' : 'border-gray-200 dark:border-gray-700'}`}>
+              {isActivePlan && (
+                <span className="absolute left-5 top-5 rounded-full bg-blue-600 px-2.5 py-1 text-xs font-bold text-white">
+                  Your active plan
+                </span>
+              )}
+              {plan.discountPercent > 0 && (
+                <span className="absolute right-5 top-5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">{plan.discountPercent}% OFF</span>
+              )}
+              <h2 className={`text-2xl font-semibold ${isActivePlan ? 'mt-8' : ''}`}>{plan.name}</h2>
+              <div className="mt-5 flex items-end gap-2">
+                <span className="text-4xl font-bold">₹{plan.offerPriceRupees}</span>
+                <span className="pb-1 text-sm text-gray-500">for {plan.durationMonths} {plan.durationMonths === 1 ? 'month' : 'months'}</span>
+              </div>
+              {plan.savingsRupees > 0 && <p className="mt-2 text-sm text-gray-500"><span className="line-through">₹{plan.regularPriceRupees}</span> · Save ₹{plan.savingsRupees}</p>}
+              <ul className="mt-7 flex-1 space-y-3 border-t border-gray-100 pt-5 text-sm dark:border-gray-800">
+                {plan.features.map((feature) => <li key={feature}>✓ {feature}</li>)}
+              </ul>
+              {hasActiveSubscription ? (
+                <span className="mt-8 block cursor-not-allowed rounded-lg bg-gray-200 px-4 py-2.5 text-center text-sm font-semibold text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                  {isActivePlan ? 'Current plan' : 'Subscription active'}
+                </span>
+              ) : (
+                <Link href="/ecard-cutter" className="mt-8 block rounded-lg bg-blue-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-blue-700">
+                  Choose this plan
+                </Link>
+              )}
+            </motion.article>
+            );
+          })}
         </div>
 
-        {/* Features Section */}
-        <div className="mt-20 grid md:grid-cols-3 gap-8 text-left">
-          {["Fast Performance", "Secure & Reliable", "24/7 Support"].map((title, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.2 }}>
-              <h3 className="font-semibold text-xl mb-2">{title}</h3>
-              <p className="text-gray-600 dark:text-gray-300 text-sm">
-                High-quality experience built for modern applications.
-              </p>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      {/* Animated SVG Lines */}
-      <div className="absolute inset-0 -z-10">
-        <svg className="w-full h-full">
-          {[...Array(8)].map((_, i) => (
-            <motion.line
-              key={i}
-              x1="0"
-              y1={i * 100}
-              x2="100%"
-              y2={i * 100}
-              stroke="currentColor"
-              strokeWidth="0.5"
-              className="text-gray-300 dark:text-gray-700"
-              initial={{ x: "-100%" }}
-              animate={{ x: "100%" }}
-              transition={{ repeat: Infinity, duration: 6 + i }}
-            />
-          ))}
-        </svg>
-      </div>
-    </div>
+        {!isLoading && plans.length === 0 && <p className="mt-12 text-gray-600 dark:text-gray-300">No subscription plans are available right now.</p>}
+      </section>
+    </main>
   );
 }

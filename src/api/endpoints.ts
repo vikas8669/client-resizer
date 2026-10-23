@@ -13,6 +13,7 @@ export const ENDPOINTS = {
   ECARD_ORDER: '/api/ecard/subscribe/order',
   ECARD_VERIFY: '/api/ecard/subscribe/verify',
   ECARD_ADMIN_SETTINGS: '/api/ecard/admin/settings',
+  ECARD_ADMIN_SUBSCRIPTIONS: '/api/ecard/admin/subscriptions',
   LOGIN: '/api/auth/login',
   GOOGLE_LOGIN: '/api/auth/google',
   SIGNUP: '/api/auth/signup',
@@ -34,6 +35,7 @@ export const ENDPOINTS = {
   USERS: '/api/auth/users',
   DELETE_ME: '/api/auth/me',
   DELETE_USER: (id: string) => `/api/auth/users/${id}`,
+  UPDATE_USER_STATUS: (id: string) => `/api/auth/users/${id}/status`,
 
   RESUMES: '/api/resumes',
   RESUME_BY_ID: (id: string) => `/api/resumes/${id}`,

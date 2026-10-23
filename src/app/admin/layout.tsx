@@ -44,7 +44,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-zinc-50/50 dark:bg-zinc-950 overflow-x-hidden transition-colors duration-300">
+    <div className="flex h-screen overflow-hidden bg-[radial-gradient(circle_at_top_right,_rgba(251,146,60,0.10),_transparent_32%),#fafafa] dark:bg-[radial-gradient(circle_at_top_right,_rgba(234,88,12,0.14),_transparent_32%),#09090b] transition-colors duration-300">
       {/* Mobile Overlay */}
       {isMobileSidebarOpen && (
         <div 
@@ -58,9 +58,9 @@ export default function AdminLayout({
         onMobileClose={() => setIsMobileSidebarOpen(false)} 
       />
       
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex flex-1 flex-col h-screen overflow-y-auto overflow-x-hidden min-w-0">
         {/* ... header and main code ... */}
-        <header className="sticky top-0 z-[100] flex h-16 items-center justify-between border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 backdrop-blur-md px-4 md:px-8 transition-colors">
+        <header className="sticky top-0 z-[100] flex h-[72px] items-center justify-between border-b border-zinc-200/80 bg-white/80 px-4 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/70 md:px-8 transition-colors">
           <div className="flex items-center gap-4 flex-1">
             <button 
               onClick={() => setIsMobileSidebarOpen(true)}
@@ -73,7 +73,7 @@ export default function AdminLayout({
               <input 
                 type="text" 
                 placeholder="Search analytics, suggestions..." 
-                className="h-9 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 pl-10 pr-4 text-sm outline-none transition-all focus:bg-white dark:focus:bg-zinc-700 focus:ring-1 focus:ring-orange-500 dark:text-zinc-100"
+                className="h-10 w-full rounded-xl border border-transparent bg-zinc-100/80 pl-10 pr-4 text-sm outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-100 dark:bg-zinc-900 dark:focus:border-orange-500/30 dark:focus:bg-zinc-800 dark:focus:ring-orange-500/10 dark:text-zinc-100"
               />
             </div>
           </div>
@@ -93,7 +93,7 @@ export default function AdminLayout({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+        <main className="flex-1 p-4 md:p-8">
           <div className="mx-auto max-w-7xl">
             {children}
           </div>

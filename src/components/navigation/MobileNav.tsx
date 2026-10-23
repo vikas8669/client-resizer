@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import Logo from "@/components/Logo";
@@ -419,17 +420,20 @@ export function MobileNav({ user }: MobileNavProps) {
                       <KeyRound className="w-3.5 h-3.5 mr-1.5" />
                       Password
                     </Link>
-                    <Link
-                      href="/forgot-password"
-                      onClick={closeSheet}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeSheet();
+                        toast.info("This feature is coming soon!");
+                      }}
                       className={cn(
                         buttonVariants({ variant: "ghost", size: "sm" }),
-                        "rounded-xl justify-start text-xs"
+                        "rounded-xl justify-start text-xs cursor-pointer"
                       )}
                     >
                       <HelpCircle className="w-3.5 h-3.5 mr-1.5" />
                       Forgot?
-                    </Link>
+                    </button>
                   </div>
 
                   {user.role === "admin" && (

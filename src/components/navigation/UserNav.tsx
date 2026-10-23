@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AuthUser } from "@/lib/auth";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface UserNavProps {
   user: AuthUser | null;
@@ -113,7 +114,7 @@ export function UserNav({ user }: UserNavProps) {
           </DropdownMenuItem>
 
           <DropdownMenuItem
-            render={<Link href="/forgot-password" />}
+            onClick={() => toast.info('This feature is coming soon!')}
             className="w-full p-2.5 rounded-xl cursor-pointer flex items-center gap-2.5 hover:bg-zinc-100 dark:hover:bg-white/10"
           >
             <HelpCircle className="h-4 w-4 text-zinc-500" />

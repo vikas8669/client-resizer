@@ -204,9 +204,13 @@ function LoginContent() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Password</label>
-                <Link href="/forgot-password" className="text-xs font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+                <button
+                  type="button"
+                  onClick={() => toast.info("This feature is coming soon!")}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 cursor-pointer"
+                >
                   <span className="underline">Forgot Password?</span>
-                </Link>
+                </button>
               </div>
               <div className="relative">
                 <input

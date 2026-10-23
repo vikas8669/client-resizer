@@ -11,6 +11,8 @@ import {
   Users, 
   Image as ImageIcon,
   Scissors,
+  CreditCard,
+  Receipt,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -23,6 +25,8 @@ import { useRouter } from 'next/navigation';
 
 const NAV_ITEMS = [
   { name: 'Dashboard', icon: LayoutDashboard, href: '/admin' },
+  { name: 'User Purchases', icon: Receipt, href: '/admin?tab=purchases' },
+  { name: 'Pricing Plans', icon: CreditCard, href: '/admin?tab=pricing' },
   { name: 'E-Card Cutter', icon: Scissors, href: '/admin/ecard' },
   { name: 'Suggestions', icon: MessageSquare, href: '/admin?tab=suggestions' },
   { name: 'Feedback', icon: Star, href: '/admin?tab=feedback' },
@@ -50,12 +54,12 @@ export function AdminSidebar({
   return (
     <aside 
       className={cn(
-        "fixed inset-y-0 left-0 z-[150] flex flex-col border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 transition-all duration-300 ease-in-out md:relative h-screen",
+        "fixed inset-y-0 left-0 z-[150] flex flex-col border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 transition-all duration-300 ease-in-out md:sticky md:top-0 h-screen shrink-0",
         isCollapsed ? "w-20" : "w-64",
         isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}
     >
-      <div className="flex h-16 items-center justify-between border-b border-zinc-100 dark:border-zinc-800 px-6">
+      <div className="flex h-16 items-center justify-between border-b border-zinc-100 dark:border-zinc-800 px-6 shrink-0">
         <Link href="/" className="flex items-center gap-2 font-bold text-zinc-900 dark:text-white overflow-hidden">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-500 text-white shadow-lg shadow-orange-200">
             <Sparkles className="h-5 w-5" />
@@ -72,7 +76,7 @@ export function AdminSidebar({
         </button>
       </div>
 
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className="flex-1 space-y-1 p-4 overflow-y-auto overflow-x-hidden">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           
@@ -100,7 +104,7 @@ export function AdminSidebar({
         })}
       </nav>
 
-      <div className="border-t border-zinc-100 dark:border-zinc-800 p-4">
+      <div className="border-t border-zinc-100 dark:border-zinc-800 p-4 shrink-0">
         <button
           onClick={handleLogout}
           className={cn(
