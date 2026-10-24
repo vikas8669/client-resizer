@@ -21,19 +21,27 @@ function PopoverContent({
   className,
   align = "center",
   sideOffset = 4,
+  positionMethod = "fixed",
   ...props
 }: PopoverPrimitive.Popup.Props & {
     align?: "center" | "start" | "end"
     sideOffset?: number
+    positionMethod?: "absolute" | "fixed"
 }) {
   return (
     <PopoverPortal>
-      <PopoverPrimitive.Positioner align={align} sideOffset={sideOffset}>
+      <PopoverPrimitive.Positioner 
+        align={align} 
+        sideOffset={sideOffset}
+        positionMethod={positionMethod}
+        style={{ zIndex: 99999 }}
+        className="z-[99999]"
+      >
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           style={{ zIndex: 99999 }}
           className={cn(
-            "w-80 rounded-2xl border border-zinc-100 bg-white p-0 text-zinc-950 shadow-2xl outline-none",
+            "w-80 rounded-2xl border border-zinc-200 bg-white p-0 text-zinc-950 shadow-2xl outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 z-[99999]",
             "data-[side=bottom]:animate-in data-[side=bottom]:fade-in-0 data-[side=bottom]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2",
             "data-[side=top]:animate-in data-[side=top]:fade-in-0 data-[side=top]:zoom-in-95 data-[side=top]:slide-in-from-bottom-2",
             className
@@ -46,4 +54,3 @@ function PopoverContent({
 }
 
 export { Popover, PopoverTrigger, PopoverContent, PopoverPortal }
-  

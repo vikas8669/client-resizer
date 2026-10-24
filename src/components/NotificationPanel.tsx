@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
-import { Bell, MessageSquare, Clock, CheckCircle2 } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Bell, MessageSquare, Star, Clock, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useFeedback } from '@/hooks/useFeedback';
 import { 
   Popover, 
@@ -12,10 +13,42 @@ import { Button } from '@/components/ui/button';
 import { cn } from '../lib/utils';
 
 export function NotificationPanel() {
-  const { feedback } = useFeedback();
+  const router = useRouter();
+  const { feedback, refetch } = useFeedback();
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
   
+  // Collect all items needing attention
   const unresolvedSuggestions = feedback.filter(item => item.type === 'suggestion' && !item.isResolved);
-  const notificationCount = unresolvedSuggestions.length;
+  const unresolvedFeedback = feedback.filter(item => !item.isResolved);
+  
+  // Notification count: number of unresolved items, or total recent submissions if none unresolved
+  const notificationCount = unresolvedSuggestions.length > 0 
+    ? unresolvedSuggestions.length 
+    : unresolvedFeedback.length > 0 
+      ? unresolvedFeedback.length 
+      : 0;
+
+  // Items to display in the list (unresolved first, then recent feedback)
+  const displayItems = unresolvedSuggestions.length > 0 
+    ? unresolvedSuggestions.slice(0, 6) 
+    : unresolvedFeedback.length > 0 
+      ? unresolvedFeedback.slice(0, 6) 
+      : feedback.slice(0, 5);
+
+  const formatNotificationDate = (dateStr?: string) => {
+    if (!dateStr) return 'Recently';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 'Recently';
+    return d.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   return (
     <Popover>
@@ -24,28 +57,34 @@ export function NotificationPanel() {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="relative rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            className="relative rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
           >
             <Bell className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
             {notificationCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
+              <span className="absolute -top-0.5 -right-0.5 flex min-w-4 h-4 px-1 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-zinc-950 animate-in fade-in zoom-in-75 duration-200">
                 {notificationCount}
               </span>
             )}
           </Button>
         }
       />
-      <PopoverContent className="border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900" align="end" sideOffset={12}>
+      <PopoverContent 
+        className="w-80 sm:w-96 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xl z-[99999]" 
+        align="end" 
+        sideOffset={12}
+      >
         <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 px-4 py-3">
           <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Notifications</h3>
-          {notificationCount > 0 && (
+          {notificationCount > 0 ? (
             <span className="rounded-full bg-orange-50 dark:bg-orange-500/10 px-2 py-0.5 text-xs font-medium text-orange-600 dark:text-orange-400">
               {notificationCount} new
             </span>
+          ) : (
+            <span className="text-xs text-zinc-400 dark:text-zinc-500">All caught up</span>
           )}
         </div>
-        <div className="max-h-[400px] overflow-y-auto">
-          {notificationCount === 0 ? (
+        <div className="max-h-[380px] overflow-y-auto">
+          {displayItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
               <div className="rounded-full bg-emerald-50 dark:bg-emerald-500/10 p-3 text-emerald-500 dark:text-emerald-400 mb-3">
                 <CheckCircle2 className="h-6 w-6" />
@@ -54,32 +93,64 @@ export function NotificationPanel() {
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">No new suggestions or notifications at the moment.</p>
             </div>
           ) : (
-            <div className="divide-y divide-zinc-50 dark:divide-zinc-800">
-              {unresolvedSuggestions.slice(0, 5).map((item) => (
-                <div key={item._id} className="flex gap-3 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer">
-                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400">
-                    <MessageSquare className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">New Suggestion</p>
-                    <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{item.comment}</p>
-                    <div className="mt-2 flex items-center gap-1 text-[10px] text-zinc-400 dark:text-zinc-500">
-                      <Clock className="h-3 w-3" />
-                      {new Date(item.createdAt).toLocaleString()}
+            <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {displayItems.map((item) => {
+                const isSuggestion = item.type === 'suggestion';
+                return (
+                  <div 
+                    key={item._id} 
+                    onClick={() => router.push(isSuggestion ? '/admin?tab=suggestions' : '/admin?tab=feedback')}
+                    className="flex gap-3 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer group"
+                  >
+                    <div className={cn(
+                      "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                      isSuggestion 
+                        ? "bg-orange-100 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400" 
+                        : "bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    )}>
+                      {isSuggestion ? <MessageSquare className="h-4 w-4" /> : <Star className="h-4 w-4" />}
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                          {isSuggestion ? 'New Suggestion' : `Feedback (${item.rating}★)`}
+                        </p>
+                        <span className={cn(
+                          "text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0",
+                          item.isResolved 
+                            ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300"
+                            : "bg-orange-50 text-orange-600 dark:bg-orange-950/60 dark:text-orange-300"
+                        )}>
+                          {item.isResolved ? 'Resolved' : 'Pending'}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{item.comment}</p>
+                      <div className="mt-2 flex items-center justify-between text-[10px] text-zinc-400 dark:text-zinc-500">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatNotificationDate(item.createdAt)}
+                        </span>
+                        <span className="opacity-0 group-hover:opacity-100 transition-opacity text-orange-600 dark:text-orange-400 font-medium flex items-center gap-0.5">
+                          View <ArrowRight className="h-3 w-3" />
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
-        {notificationCount > 5 && (
-          <div className="border-t border-zinc-100 dark:border-zinc-800 p-2 text-center">
-            <Button variant="ghost" size="sm" className="w-full text-xs text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-500/10">
-              View all suggestions
-            </Button>
-          </div>
-        )}
+        <div className="border-t border-zinc-100 dark:border-zinc-800 p-2 text-center">
+          <Button 
+            onClick={() => router.push('/admin?tab=suggestions')}
+            variant="ghost" 
+            size="sm" 
+            className="w-full text-xs text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-500/10 cursor-pointer"
+          >
+            View all suggestions
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   );

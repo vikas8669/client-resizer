@@ -7,6 +7,9 @@ import apiClient from '@/api/api';
 import { ENDPOINTS } from '@/api/endpoints';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { 
+  LayoutDashboard,
+  ArrowRight,
+  Settings,
   Star, 
   Users, 
   Image as ImageIcon, 
@@ -84,7 +87,7 @@ interface SubscriptionRecord {
 function AdminDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const defaultTab = searchParams.get('tab') || 'purchases';
+  const currentTab = searchParams.get('tab') || 'overview';
 
   const [isMounted, setIsMounted] = useState(false);
   const { feedback, refetch, resolveSuggestion } = useFeedback();
@@ -396,8 +399,15 @@ function AdminDashboardContent() {
         ))}
       </div>
 
-      <Tabs value={defaultTab} onValueChange={(v) => router.push(`/admin?tab=${v}`)}>
-        <TabsList className="h-auto bg-white/90 dark:bg-zinc-900/90 backdrop-blur border border-zinc-200 dark:border-zinc-800 rounded-2xl p-1.5 flex flex-wrap gap-1">
+      <Tabs  value={currentTab} onValueChange={(v) => router.push(v === 'overview' ? '/admin' : `/admin?tab=${v}`)}>
+        <TabsList className=" bg-white/90 dark:bg-zinc-900/90 backdrop-blur rounded-2xl p-1.5 flex flex-wrap gap-1">
+          <TabsTrigger 
+            className="h-10 rounded-xl px-4 data-[active]:bg-zinc-900 data-[active]:text-white dark:data-[active]:bg-orange-500 cursor-pointer flex items-center gap-2" 
+            value="overview"
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            <span>Overview</span>
+          </TabsTrigger>
           <TabsTrigger 
             className="h-10 rounded-xl px-4 data-[active]:bg-zinc-900 data-[active]:text-white dark:data-[active]:bg-orange-500 cursor-pointer flex items-center gap-2" 
             value="purchases"
@@ -427,6 +437,288 @@ function AdminDashboardContent() {
             <span>Feedback ({feedbackItems.length})</span>
           </TabsTrigger>
         </TabsList>
+
+        {/* DASHBOARD OVERVIEW TAB CONTENT */}
+        <TabsContent value="overview" className="mt-6 space-y-6">
+          {/* Quick Metrics Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Card className="rounded-2xl border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+              <CardContent className="p-4">
+                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 block mb-1">
+                  Total Purchases
+                </span>
+                <div className="text-2xl font-black text-zinc-900 dark:text-white">
+                  {subscriptions.length}
+                </div>
+                <span className="text-[11px] text-zinc-400">All-time order transactions</span>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+              <CardContent className="p-4">
+                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 block mb-1">
+                  Active Members
+                </span>
+                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                  <span>{activeSubsCount}</span>
+                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                </div>
+                <span className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80">Currently valid access</span>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+              <CardContent className="p-4">
+                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 block mb-1">
+                  Revenue Collected
+                </span>
+                <div className="text-2xl font-black text-orange-600 dark:text-orange-400">
+                  ₹{totalRevenueCollected.toLocaleString('en-IN')}
+                </div>
+                <span className="text-[11px] text-zinc-400">From paid subscriptions</span>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
+              <CardContent className="p-4">
+                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 block mb-1">
+                  Expired Plans
+                </span>
+                <div className="text-2xl font-black text-zinc-500 dark:text-zinc-400">
+                  {expiredSubsCount}
+                </div>
+                <span className="text-[11px] text-zinc-400">Past access periods</span>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Highlights Grid */}
+          <div className="grid  grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Recent Purchases Card */}
+            <Card className="rounded-3xl border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden flex flex-col justify-between">
+              <div>
+                <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/80 pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-orange-100 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400">
+                        <Receipt className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base font-bold">Recent Purchases</CardTitle>
+                        <CardDescription className="text-xs">Latest customer subscription payments</CardDescription>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 space-y-3">
+                  {subscriptions.length === 0 ? (
+                    <p className="text-xs text-zinc-400 py-6 text-center">No purchases recorded yet</p>
+                  ) : (
+                    subscriptions.slice(0, 3).map((sub) => (
+                      <div key={sub._id} className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{sub.user?.name || 'Customer'}</p>
+                          <p className="text-xs text-zinc-400">{sub.user?.email || 'N/A'}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-orange-600 dark:text-orange-400">₹{sub.amountRupees || Math.round(sub.amountPaise / 100)}</p>
+                          <span className={cn(
+                            "inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold mt-0.5",
+                            sub.status === 'active' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300" : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                          )}>
+                            {sub.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </div>
+              <div className="p-4 border-t border-zinc-100 dark:border-zinc-800/80">
+                <Button 
+                  onClick={() => router.push('/admin?tab=purchases')}
+                  variant="outline" 
+                  className="w-full rounded-xl text-xs font-semibold justify-between cursor-pointer"
+                >
+                  <span>View All User Purchases ({subscriptions.length})</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </Card>
+
+            {/* Plans & Settings Summary */}
+            <Card className="rounded-3xl border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden flex flex-col justify-between">
+              <div>
+                <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/80 pb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                      <CreditCard className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-bold">Plans & Feature Controls</CardTitle>
+                      <CardDescription className="text-xs">Pricing plans and cutter access</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
+                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Total Configured Plans</span>
+                    <span className="text-sm font-bold text-zinc-900 dark:text-white">{plans.length} Plans</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
+                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">E-Card Cutter Tool</span>
+                    <span className={cn(
+                      "px-2.5 py-0.5 rounded-full text-xs font-semibold",
+                      ecutterEnabled ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300" : "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300"
+                    )}>
+                      {ecutterEnabled ? 'Enabled' : 'Disabled'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
+                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Razorpay Payments</span>
+                    <span className={cn(
+                      "px-2.5 py-0.5 rounded-full text-xs font-semibold",
+                      paymentEnabled ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300" : "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300"
+                    )}>
+                      {paymentEnabled ? 'Enabled' : 'Disabled'}
+                    </span>
+                  </div>
+                </CardContent>
+              </div>
+              <div className="p-4 border-t border-zinc-100 dark:border-zinc-800/80">
+                <Button 
+                  onClick={() => router.push('/admin?tab=pricing')}
+                  variant="outline" 
+                  className="w-full rounded-xl text-xs font-semibold justify-between cursor-pointer"
+                >
+                  <span>Edit Pricing & Access Settings</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </Card>
+
+            {/* Suggestions Card */}
+            <Card className="rounded-3xl border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden flex flex-col justify-between">
+              <div>
+                <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/80 pb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                      <MessageSquare className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-bold">User Suggestions</CardTitle>
+                      <CardDescription className="text-xs">Feature requests submitted by users</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 space-y-3">
+                  {suggestionItems.length === 0 ? (
+                    <p className="text-xs text-zinc-400 py-6 text-center">No suggestions yet</p>
+                  ) : (
+                    suggestionItems.slice(0, 2).map((item) => (
+                      <div key={item._id} className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
+                        <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 line-clamp-1">{item.name ? `${item.name}: ` : ''}{item.comment}</p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{item.isResolved ? '✓ Resolved' : '● Pending review'}</p>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </div>
+              <div className="p-4 border-t border-zinc-100 dark:border-zinc-800/80">
+                <Button 
+                  onClick={() => router.push('/admin?tab=suggestions')}
+                  variant="outline" 
+                  className="w-full rounded-xl text-xs font-semibold justify-between cursor-pointer"
+                >
+                  <span>Manage Suggestions ({suggestionItems.length})</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </Card>
+
+            {/* Feedback & Ratings Card */}
+            <Card className="rounded-3xl border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden flex flex-col justify-between">
+              <div>
+                <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/80 pb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                      <Star className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-bold">Feedback & Satisfaction</CardTitle>
+                      <CardDescription className="text-xs">User satisfaction rating: {stats.averageRating.toFixed(1)} / 5</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 space-y-3">
+                  {feedbackItems.length === 0 ? (
+                    <p className="text-xs text-zinc-400 py-6 text-center">No feedback reviews yet</p>
+                  ) : (
+                    feedbackItems.slice(0, 2).map((item) => (
+                      <div key={item._id} className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
+                        <div className="flex gap-1 mb-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={cn("w-3.5 h-3.5", i < item.rating ? "text-yellow-400 fill-yellow-400" : "text-zinc-300")} />
+                          ))}
+                        </div>
+                        <p className="text-xs text-zinc-600 dark:text-zinc-300 line-clamp-2">{item.comment}</p>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </div>
+              <div className="p-4 border-t border-zinc-100 dark:border-zinc-800/80">
+                <Button 
+                  onClick={() => router.push('/admin?tab=feedback')}
+                  variant="outline" 
+                  className="w-full rounded-xl text-xs font-semibold justify-between cursor-pointer"
+                >
+                  <span>View All Feedback Reviews ({feedbackItems.length})</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </Card>
+          </div>
+
+          {/* Quick Tool Links */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <button 
+              onClick={() => router.push('/admin/ecard')} 
+              className="p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-left hover:border-orange-300 dark:hover:border-orange-500/30 transition-all group cursor-pointer"
+            >
+              <Scissors className="h-5 w-5 text-orange-500 mb-2 group-hover:scale-110 transition-transform" />
+              <p className="text-sm font-semibold text-zinc-900 dark:text-white">E-Card Cutter</p>
+              <p className="text-[11px] text-zinc-400">Launch ecard tool</p>
+            </button>
+
+            <button 
+              onClick={() => router.push('/admin/users')} 
+              className="p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-left hover:border-orange-300 dark:hover:border-orange-500/30 transition-all group cursor-pointer"
+            >
+              <Users className="h-5 w-5 text-emerald-500 mb-2 group-hover:scale-110 transition-transform" />
+              <p className="text-sm font-semibold text-zinc-900 dark:text-white">Manage Users</p>
+              <p className="text-[11px] text-zinc-400">{stats.totalUsers} registered users</p>
+            </button>
+
+            <button 
+              onClick={() => router.push('/admin/images')} 
+              className="p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-left hover:border-orange-300 dark:hover:border-orange-500/30 transition-all group cursor-pointer"
+            >
+              <ImageIcon className="h-5 w-5 text-indigo-500 mb-2 group-hover:scale-110 transition-transform" />
+              <p className="text-sm font-semibold text-zinc-900 dark:text-white">Processed Images</p>
+              <p className="text-[11px] text-zinc-400">{stats.totalImagesProcessed} files converted</p>
+            </button>
+
+            <button 
+              onClick={() => router.push('/admin/settings')} 
+              className="p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-left hover:border-orange-300 dark:hover:border-orange-500/30 transition-all group cursor-pointer"
+            >
+              <Settings className="h-5 w-5 text-zinc-500 mb-2 group-hover:scale-110 transition-transform" />
+              <p className="text-sm font-semibold text-zinc-900 dark:text-white">Settings</p>
+              <p className="text-[11px] text-zinc-400">System configuration</p>
+            </button>
+          </div>
+        </TabsContent>
 
         {/* USER PURCHASES TRACKING TAB CONTENT */}
         <TabsContent value="purchases" className="mt-6 space-y-6">

@@ -1,89 +1,57 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
-import { Button } from "@/components/ui/button";
-import { ResumeForm } from "@/features/resume/components/ResumeForm";
+import {
+  ResumeForm,
+  ResumeSectionTab,
+} from "@/features/resume/components/ResumeForm";
 import { ResumePreview } from "@/features/resume/components/ResumePreview";
-import { ResumeHistoryModal } from "@/features/resume/components/ResumeHistoryModal";
-import { INITIAL_RESUME_DATA, IResumeData } from "@/features/resume/types";
-import { getStoredUser, AuthUser } from "@/lib/auth";
-import apiClient from "@/api/api";
-import { ENDPOINTS } from "@/api/endpoints";
+import {
+  INITIAL_RESUME_DATA,
+  IResumeData,
+  ResumeTemplateId,
+  ResumeSectionKey,
+  DEFAULT_SECTION_ORDER,
+  SECTION_METADATA,
+} from "@/features/resume/types";
 
 import {
   Download,
-  Cloud,
-  History,
   RotateCcw,
   Sparkles,
-  ArrowLeft,
-  Loader2,
-  CheckCircle2,
-  FileCheck,
-  Zap,
+  FileText,
+  FileCode,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Printer,
+  ChevronDown,
+  Layers,
+  Check,
+  Eye,
+  EyeOff,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
-
-let colorCtx: CanvasRenderingContext2D | null = null;
-
-/**
- * Helper to normalize CSS colors (oklch, lab, color-mix) to exact RGB/RGBA strings for PDF generation
- */
-function parseCssColorToRgb(colorStr: string): string {
-  if (
-    !colorStr ||
-    colorStr === "transparent" ||
-    colorStr === "inherit" ||
-    colorStr === "initial" ||
-    colorStr === "none"
-  ) {
-    return colorStr;
-  }
-  if (colorStr.startsWith("rgb") && !colorStr.includes("oklch") && !colorStr.includes("lab")) {
-    return colorStr;
-  }
-
-  try {
-    if (!colorCtx && typeof document !== "undefined") {
-      const canvas = document.createElement("canvas");
-      canvas.width = 1;
-      canvas.height = 1;
-      colorCtx = canvas.getContext("2d", { willReadFrequently: true });
-    }
-    if (!colorCtx) return colorStr;
-
-    colorCtx.clearRect(0, 0, 1, 1);
-    colorCtx.fillStyle = "#000000";
-    colorCtx.fillStyle = colorStr;
-    colorCtx.fillRect(0, 0, 1, 1);
-
-    const [r, g, b, a] = colorCtx.getImageData(0, 0, 1, 1).data;
-    if (a === 0) return "transparent";
-    if (a === 255) return `rgb(${r}, ${g}, ${b})`;
-    return `rgba(${r}, ${g}, ${b}, ${(a / 255).toFixed(3)})`;
-  } catch {
-    return colorStr;
-  }
-}
 
 export default function ResumeBuilderPage() {
   const [resumeData, setResumeData] = useState<IResumeData>(INITIAL_RESUME_DATA);
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<ResumeSectionTab>("header");
+  const [previewFormat, setPreviewFormat] = useState<"html" | "pdf" | "tex">("pdf");
+  const [zoomLevel, setZoomLevel] = useState<number>(86);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [isLoadedFromStorage, setIsLoadedFromStorage] = useState(false);
+  const [isTemplateMenuOpen, setIsTemplateMenuOpen] = useState(false);
+  const [isSectionsMenuOpen, setIsSectionsMenuOpen] = useState(false);
 
-  // Load saved draft on initial mount
+  const previewContainerRef = useRef<HTMLDivElement>(null);
+
+  // Load draft from localStorage
   useEffect(() => {
-    setUser(getStoredUser());
-    const refreshUser = () => setUser(getStoredUser());
-    window.addEventListener("auth-user-updated", refreshUser);
-
     try {
       const savedDraft = localStorage.getItem("printpix_resume_draft");
       if (savedDraft) {
@@ -92,380 +60,814 @@ export default function ResumeBuilderPage() {
           setResumeData(parsed);
         }
       }
-    } catch (err) {
-      console.error("Failed to load draft from localStorage", err);
-    } finally {
-      setIsLoadedFromStorage(true);
+    } catch (e) {
+      console.error("Failed to restore resume draft", e);
     }
-
-    return () => window.removeEventListener("auth-user-updated", refreshUser);
   }, []);
 
-  // Save draft to localStorage whenever resumeData changes (after initial load)
+  // Auto-save draft on changes
   useEffect(() => {
-    if (!isLoadedFromStorage) return;
     try {
       localStorage.setItem("printpix_resume_draft", JSON.stringify(resumeData));
-    } catch (err) {
-      console.error("Failed to save draft to localStorage", err);
+    } catch (e) {
+      // ignore quota errors
     }
-  }, [resumeData, isLoadedFromStorage]);
+  }, [resumeData]);
 
-  const renderResumeToCanvas = async (element: HTMLElement, scale = 3) => {
-    return await html2canvas(element, {
-      scale,
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      backgroundColor: "#ffffff",
-      width: 794,
-      windowWidth: 794,
-      scrollX: 0,
-      scrollY: 0,
-      x: 0,
-      y: 0,
-      imageTimeout: 0,
-      onclone: (clonedDoc) => {
-        // 1. Remove external <link rel="stylesheet"> tags to prevent html2canvas from fetching and failing on unhandled lab()/oklch() in Next.js/Tailwind v4 global CSS
-        const links = Array.from(clonedDoc.querySelectorAll("link[rel='stylesheet']"));
-        links.forEach((link) => link.remove());
+  // Reset to default sample data
+  const handleReset = () => {
+    if (confirm("Reset resume to sample data? Any unsaved edits will be replaced.")) {
+      setResumeData(INITIAL_RESUME_DATA);
+      localStorage.removeItem("printpix_resume_draft");
+      toast.success("Resume reset to sample data!");
+    }
+  };
 
-        // 2. Convert modern CSS colors (oklch, lab, color-mix) in all <style> tags to valid RGB/RGBA
-        const styleElements = Array.from(clonedDoc.querySelectorAll("style"));
-        styleElements.forEach((style) => {
-          if (style.textContent) {
-            style.textContent = style.textContent.replace(
-              /(?:oklch|lab|color-mix)\((?:[^()]+|\([^()]*\))*\)/gi,
-              (match) => parseCssColorToRgb(match)
-            );
-          }
-        });
+  // Change template
+  const handleTemplateSelect = (templateId: ResumeTemplateId) => {
+    setResumeData((prev) => ({ ...prev, templateId }));
+    setIsTemplateMenuOpen(false);
+    toast.success(`Template changed to ${templateId.replace("_", " ").toUpperCase()}`);
+  };
 
-        if (clonedDoc.body) {
-          clonedDoc.body.style.margin = "0";
-          clonedDoc.body.style.padding = "0";
-          clonedDoc.body.style.backgroundColor = "#ffffff";
-        }
+  // Reorder sections
+  const handleMoveSection = (secKey: ResumeSectionKey, direction: "up" | "down") => {
+    const currentOrder =
+      resumeData.sectionOrder && resumeData.sectionOrder.length > 0
+        ? resumeData.sectionOrder
+        : DEFAULT_SECTION_ORDER;
+    const idx = currentOrder.indexOf(secKey);
+    if (idx === -1) return;
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= currentOrder.length) return;
 
-        const paper = clonedDoc.getElementById("resume-paper");
-        if (paper) {
-          paper.style.position = "relative";
-          paper.style.top = "0";
-          paper.style.left = "0";
-          paper.style.margin = "0";
-          paper.style.width = "794px";
-          paper.style.minWidth = "794px";
-          paper.style.maxWidth = "794px";
-          paper.style.minHeight = "1123px";
-          paper.style.height = "auto";
-          paper.style.transform = "none";
-          paper.style.backgroundColor = "#ffffff";
-          paper.style.letterSpacing = "normal";
-          paper.style.boxSizing = "border-box";
-          paper.style.padding = "36px 40px";
-          paper.style.setProperty("-webkit-font-smoothing", "subpixel-antialiased");
-          paper.style.setProperty("-moz-osx-font-smoothing", "auto");
-          paper.style.setProperty("text-rendering", "geometricPrecision");
+    const newOrder = [...currentOrder];
+    const [moved] = newOrder.splice(idx, 1);
+    newOrder.splice(targetIdx, 0, moved);
 
-          const sourceElements = Array.from(element.querySelectorAll("*"));
-          const clonedElements = Array.from(paper.querySelectorAll("*"));
-
-          clonedElements.forEach((clonedEl, idx) => {
-            const htmlEl = clonedEl as HTMLElement;
-            const sourceEl = sourceElements[idx] as HTMLElement | undefined;
-
-            htmlEl.style.letterSpacing = "normal";
-            htmlEl.style.setProperty("-webkit-font-smoothing", "subpixel-antialiased");
-            htmlEl.style.setProperty("-moz-osx-font-smoothing", "auto");
-
-            if (sourceEl) {
-              const compStyle = window.getComputedStyle(sourceEl);
-
-              const colorVal = compStyle.color;
-              if (colorVal && colorVal !== "transparent" && colorVal !== "rgba(0, 0, 0, 0)") {
-                htmlEl.style.color = parseCssColorToRgb(colorVal);
-              }
-
-              const bgVal = compStyle.backgroundColor;
-              if (bgVal && bgVal !== "transparent" && bgVal !== "rgba(0, 0, 0, 0)") {
-                htmlEl.style.backgroundColor = parseCssColorToRgb(bgVal);
-              }
-
-              const borderVal = compStyle.borderColor;
-              if (borderVal && borderVal !== "transparent" && borderVal !== "rgba(0, 0, 0, 0)") {
-                htmlEl.style.borderColor = parseCssColorToRgb(borderVal);
-              }
-
-              if (compStyle.fontWeight && compStyle.fontWeight !== "normal" && compStyle.fontWeight !== "400") {
-                htmlEl.style.fontWeight = compStyle.fontWeight;
-              }
-
-              if (compStyle.fontSize) {
-                htmlEl.style.fontSize = compStyle.fontSize;
-              }
-            }
-
-            // Sanitize any remaining inline cssText with lab/oklch
-            if (htmlEl.style.cssText && (htmlEl.style.cssText.includes("lab(") || htmlEl.style.cssText.includes("oklch(") || htmlEl.style.cssText.includes("color-mix("))) {
-              htmlEl.style.cssText = htmlEl.style.cssText.replace(
-                /(?:oklch|lab|color-mix)\((?:[^()]+|\([^()]*\))*\)/gi,
-                (match) => parseCssColorToRgb(match)
-              );
-            }
-          });
-
-          const badges = paper.querySelectorAll(".skill-badge");
-          badges.forEach((b) => {
-            const badgeEl = b as HTMLElement;
-            badgeEl.style.display = "inline-flex";
-            badgeEl.style.alignItems = "center";
-            badgeEl.style.justifyContent = "center";
-            badgeEl.style.height = "30px";
-            badgeEl.style.lineHeight = "1";
-            badgeEl.style.padding = "0 16px";
-            badgeEl.style.boxSizing = "border-box";
-          });
-        }
-      },
+    setResumeData({
+      ...resumeData,
+      sectionOrder: newOrder,
     });
   };
 
-  const handleDownloadPdf = async () => {
-    setIsDownloading(true);
-    try {
-      const paperElement = document.getElementById("resume-paper");
-      if (!paperElement) {
-        toast.error("Resume preview not found");
-        return;
-      }
+  // Toggle section visibility
+  const handleToggleVisibility = (secKey: ResumeSectionKey) => {
+    const meta = SECTION_METADATA[secKey];
+    if (!meta) return;
+    const visKey = meta.visibilityKey;
+    const current = resumeData.visibility[visKey] !== false;
+    setResumeData({
+      ...resumeData,
+      visibility: {
+        ...resumeData.visibility,
+        [visKey]: !current,
+      },
+    });
+    toast.success(`${meta.label} ${!current ? "visible" : "hidden"}`);
+  };
 
-      toast.info("Generating PDF...");
-      const canvas = await renderResumeToCanvas(paperElement, 3);
-      const imgData = canvas.toDataURL("image/png", 1.0);
+  // 100% Client-Side PDF Generation (No backend API, no Cloudinary!)
+  const handleDownloadPdf = async () => {
+    const paperElem = document.getElementById("resume-paper");
+    if (!paperElem) {
+      toast.error("Resume preview element not found");
+      return;
+    }
+
+    let sandbox: HTMLDivElement | null = null;
+    try {
+      setIsDownloading(true);
+      toast.info("Generating high-resolution PDF...");
+
+      // Create an isolated offscreen sandbox container at exact A4 desktop width (794px = 210mm at 96dpi)
+      // This completely isolates the resume from parent split-pane flex/grid bounds and zoom scale transforms.
+      sandbox = document.createElement("div");
+      sandbox.style.position = "fixed";
+      sandbox.style.left = "-9999px";
+      sandbox.style.top = "0";
+      sandbox.style.width = "794px";
+      sandbox.style.minWidth = "794px";
+      sandbox.style.maxWidth = "794px";
+      sandbox.style.backgroundColor = "#ffffff";
+      sandbox.style.zIndex = "-9999";
+      sandbox.style.margin = "0";
+      sandbox.style.padding = "0";
+
+      const clone = paperElem.cloneNode(true) as HTMLElement;
+      clone.style.width = "794px";
+      clone.style.minWidth = "794px";
+      clone.style.maxWidth = "794px";
+      clone.style.transform = "none";
+      clone.style.margin = "0";
+      clone.style.boxShadow = "none";
+      clone.style.setProperty("-webkit-font-smoothing", "antialiased");
+      clone.style.setProperty("text-rendering", "geometricPrecision");
+
+      sandbox.appendChild(clone);
+      document.body.appendChild(sandbox);
+
+      // Brief wait to ensure clone styles and fonts are applied
+      await new Promise((resolve) => setTimeout(resolve, 80));
+
+      // Extract all interactive links (GitHub, LinkedIn, projects, email) with their exact bounds
+      const cloneRect = clone.getBoundingClientRect();
+      const pxToMm = 210 / (clone.offsetWidth || 794);
+      const linkElements = Array.from(clone.querySelectorAll("a"));
+      const linksData = linkElements
+        .map((a) => {
+          const rawHref = a.getAttribute("href") || "";
+          if (!rawHref || rawHref === "#") return null;
+
+          let url = rawHref.trim();
+          if (
+            !url.startsWith("http://") &&
+            !url.startsWith("https://") &&
+            !url.startsWith("mailto:") &&
+            !url.startsWith("tel:")
+          ) {
+            url = `https://${url}`;
+          }
+
+          const r = a.getBoundingClientRect();
+          return {
+            url,
+            x: (r.left - cloneRect.left) * pxToMm,
+            y: (r.top - cloneRect.top) * pxToMm,
+            w: r.width * pxToMm,
+            h: r.height * pxToMm,
+          };
+        })
+        .filter(Boolean) as Array<{ url: string; x: number; y: number; w: number; h: number }>;
+
+      // Function to sanitize modern color functions (lab(), oklch(), color()) unsupported by html2canvas
+      const sanitizeColors = (root: HTMLElement | Document) => {
+        const allEls = root.querySelectorAll("*");
+        allEls.forEach((el) => {
+          const htmlEl = el as HTMLElement;
+          if (!htmlEl.style) return;
+          try {
+            const computed = window.getComputedStyle(htmlEl);
+            if (computed.color && (computed.color.includes("lab(") || computed.color.includes("oklch("))) {
+              htmlEl.style.color = "#18181b";
+            }
+            if (
+              computed.backgroundColor &&
+              (computed.backgroundColor.includes("lab(") || computed.backgroundColor.includes("oklch("))
+            ) {
+              htmlEl.style.backgroundColor = "#ffffff";
+            }
+            if (
+              computed.borderColor &&
+              (computed.borderColor.includes("lab(") || computed.borderColor.includes("oklch("))
+            ) {
+              htmlEl.style.borderColor = "#e4e4e7";
+            }
+          } catch {
+            // ignore
+          }
+        });
+      };
+
+      sanitizeColors(clone);
+
+      // High-resolution 2.8x (~300 DPI) canvas capture with zero font blur
+      const canvas = await html2canvas(clone, {
+        scale: 2.8,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        width: 794,
+        windowWidth: 1200,
+        imageTimeout: 0,
+        onclone: (clonedDoc) => {
+          sanitizeColors(clonedDoc);
+        },
+      });
+
+      // Lossless PNG data URL (prevents lossy JPEG dullness & compression artifacts around text)
+      const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
         format: "a4",
-        compress: true,
       });
-      const pdfWidth = 210;
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, Math.min(pdfHeight, 297), undefined, "FAST");
-      const fileName = `${resumeData.personalInfo.name || "Resume"}_PrintPix.pdf`.replace(/\s+/g, "_");
+      const pdfWidth = 210;
+      const pdfHeight = 297;
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      // Single-page tolerance (if within 6mm over, fit in 1 page cleanly)
+      if (imgHeight <= pdfHeight + 6) {
+        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, Math.min(imgHeight, pdfHeight), undefined, "FAST");
+
+        // Add clickable PDF link annotations to Page 1
+        linksData.forEach(({ url, x, y, w, h }) => {
+          if (w > 0 && h > 0 && y < pdfHeight) {
+            pdf.link(x, y, w, h, { url });
+          }
+        });
+      } else {
+        // Multi-page slicing
+        let heightLeft = imgHeight;
+        let position = 0;
+        let totalPages = 1;
+
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
+        heightLeft -= pdfHeight;
+
+        while (heightLeft > 0) {
+          position = position - pdfHeight;
+          pdf.addPage();
+          totalPages++;
+          pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
+          heightLeft -= pdfHeight;
+        }
+
+        // Add clickable PDF link annotations mapped to each page
+        linksData.forEach(({ url, x, y, w, h }) => {
+          if (w <= 0 || h <= 0) return;
+          const pageIndex = Math.floor(y / pdfHeight);
+          const pageNum = pageIndex + 1;
+          if (pageNum <= totalPages) {
+            const yInPage = y - pageIndex * pdfHeight;
+            pdf.setPage(pageNum);
+            pdf.link(x, yInPage, w, h, { url });
+          }
+        });
+      }
+
+      const fileName = `${(resumeData.personalInfo.name || "Resume").replace(/\s+/g, "_")}.pdf`;
       pdf.save(fileName);
       toast.success("PDF downloaded successfully!");
-    } catch (error: unknown) {
-      console.error("PDF download error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to generate PDF");
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      toast.error("Failed to generate PDF. You can also use the browser print option.");
     } finally {
+      if (sandbox && sandbox.parentNode) {
+        sandbox.parentNode.removeChild(sandbox);
+      }
       setIsDownloading(false);
     }
   };
 
-  const handleSaveToCloud = async () => {
-    if (!user) {
-      toast.error("Please login first to store your resume in Cloudinary & Database history");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const paperElement = document.getElementById("resume-paper");
-      let pdfBase64 = "";
-
-      if (paperElement) {
-        const canvas = await renderResumeToCanvas(paperElement, 2);
-        const imgData = canvas.toDataURL("image/png");
-        const pdf = new jsPDF("p", "mm", "a4");
-        const imgWidth = 210;
-        const pageHeight = 297;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, Math.min(imgHeight, pageHeight));
-
-        pdfBase64 = pdf.output("datauristring");
-      }
-
-      const payload = {
-        title: resumeData.title || `${resumeData.personalInfo.name}'s Resume`,
-        headerTitle: resumeData.headerTitle,
-        jobTitle: resumeData.jobTitle,
-        templateId: resumeData.templateId,
-        personalInfo: resumeData.personalInfo,
-        visibility: resumeData.visibility,
-        objective: resumeData.objective,
-        education: resumeData.education,
-        experience: resumeData.experience,
-        customSections: resumeData.customSections,
-        skills: resumeData.skills,
-        pdfBase64,
-      };
-
-      let response;
-      if (resumeData._id) {
-        response = await apiClient.put(ENDPOINTS.RESUME_BY_ID(resumeData._id), payload);
-      } else {
-        response = await apiClient.post(ENDPOINTS.RESUMES, payload);
-      }
-
-      if (response.data?.success) {
-        toast.success(response.data.message || "Resume saved to Cloudinary & Database!");
-        if (response.data.data) {
-          setResumeData(response.data.data);
-        }
-      }
-    } catch (error: any) {
-      console.error("Cloud Save Error:", error);
-      toast.error(error?.response?.data?.message || "Failed to save resume to cloud");
-    } finally {
-      setIsSaving(false);
-    }
+  // Download .tex (LaTeX markup)
+  const handleDownloadTex = () => {
+    const texContent = generateLatex(resumeData);
+    const blob = new Blob([texContent], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${(resumeData.personalInfo.name || "Resume").replace(/\s+/g, "_")}.tex`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("LaTeX (.tex) file downloaded!");
   };
 
-  const handleReset = () => {
-    if (confirm("Reset form to default screenshot template sample data?")) {
-      setResumeData(INITIAL_RESUME_DATA);
-      try {
-        localStorage.removeItem("printpix_resume_draft");
-      } catch (e) {}
-      toast.info("Form reset to default sample values");
-    }
+  // Browser print
+  const handleNativePrint = () => {
+    window.print();
   };
+
+  const TEMPLATES: { id: ResumeTemplateId; name: string; tag: string }[] = [
+    { id: "classic_ats", name: "Classic ATS (LaTeX)", tag: "Recommended · Screenshot Match" },
+    { id: "traditional", name: "Traditional Standard", tag: "Academic & Formal" },
+    { id: "executive", name: "Executive Corporate", tag: "Senior & Management" },
+    { id: "minimal", name: "Minimalist Clean", tag: "Modern Swiss Design" },
+    { id: "tech_compact", name: "Tech Modern", tag: "Software & Engineers" },
+  ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* HEADER BAR */}
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-1 text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/50 rounded-full text-xs font-semibold text-blue-700 dark:text-blue-300">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Instant Live Preview & Cloudinary Storage</span>
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-zinc-100 dark:bg-zinc-950">
+      {/* ── TOP HEADER (MATCHING THE USER'S PURPLE/INDIGO SCREENSHOT) ── */}
+      <header className="h-16 bg-[#5046e5] text-white px-3 sm:px-6 flex items-center justify-between shadow-md shrink-0 z-30 select-none">
+        {/* Left Branding */}
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div>
+            <div className="flex items-center gap-1.5 font-extrabold text-base sm:text-lg tracking-tight">
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>King Resume Builder</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
-              Resume Builder
-            </h1>
-            <p className="text-xs sm:text-sm text-zinc-500 max-w-xl">
-              Type on the left to see your resume render live instantly on the right. Download as a sharp A4 PDF or store in Cloudinary.
-            </p>
+            <div className="text-[10px] text-indigo-200 tracking-wider">
+              Edit · Preview · Export
+            </div>
           </div>
 
-          {/* ACTION BUTTONS */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Link href="/product">
-              <Button variant="ghost" size="sm" className="h-10 text-xs rounded-xl gap-1.5">
-                <ArrowLeft className="w-4 h-4" /> PDF Resizer
-              </Button>
-            </Link>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleReset}
-              className="h-10 text-xs rounded-xl gap-1.5"
-            >
-              <RotateCcw className="w-3.5 h-3.5" /> Reset
-            </Button>
-
-            {user && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsHistoryOpen(true)}
-                className="h-10 text-xs rounded-xl gap-1.5 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/50"
+          {/* Action Pills: Sections, Format Toggles, Download */}
+          <div className="hidden lg:flex items-center gap-1.5 ml-3">
+            {/* Sections Dropdown Button */}
+            <div className="relative">
+              <button
+                onClick={() => setIsSectionsMenuOpen(!isSectionsMenuOpen)}
+                className="h-9 px-3 rounded-lg bg-indigo-700/80 hover:bg-indigo-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
               >
-                <History className="w-4 h-4" /> History
-              </Button>
-            )}
+                <span>☰ Sections</span>
+                <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+              </button>
 
-            <Button
+              {isSectionsMenuOpen && (
+                <div className="absolute left-0 top-11 w-64 rounded-2xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xl border border-zinc-200 dark:border-zinc-800 p-2 z-50 text-xs">
+                  <div className="px-2 py-1 mb-1 font-bold text-[10px] uppercase tracking-wider text-zinc-400 flex justify-between items-center border-b border-zinc-100 dark:border-zinc-800 pb-1.5">
+                    <span>Reorder & Visibility</span>
+                    <span className="text-[10px] lowercase text-zinc-400">order & eye</span>
+                  </div>
+
+                  {/* Header Fixed */}
+                  <button
+                    onClick={() => {
+                      setActiveTab("header");
+                      setIsSectionsMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-lg mb-1 flex items-center justify-between cursor-pointer ${
+                      activeTab === "header"
+                        ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 font-semibold"
+                        : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    }`}
+                  >
+                    <span>Contact Header (Fixed)</span>
+                    {activeTab === "header" && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                  </button>
+
+                  {/* Dynamic Reorderable Sections */}
+                  {(resumeData.sectionOrder && resumeData.sectionOrder.length > 0
+                    ? resumeData.sectionOrder
+                    : DEFAULT_SECTION_ORDER
+                  ).map((secKey, idx, arr) => {
+                    const meta = SECTION_METADATA[secKey];
+                    const isVisible = resumeData.visibility[meta.visibilityKey] !== false;
+                    return (
+                      <div
+                        key={secKey}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-xl mb-0.5 group ${
+                          activeTab === secKey
+                            ? "bg-indigo-50/80 dark:bg-indigo-950/40 font-semibold text-indigo-700 dark:text-indigo-300"
+                            : "hover:bg-zinc-100 dark:hover:bg-zinc-800/80"
+                        }`}
+                      >
+                        <button
+                          onClick={() => {
+                            setActiveTab(secKey as ResumeSectionTab);
+                            setIsSectionsMenuOpen(false);
+                          }}
+                          className="flex items-center gap-2 flex-1 text-left cursor-pointer truncate"
+                        >
+                          <span className="w-4 text-[10px] text-zinc-400 font-mono">#{idx + 1}</span>
+                          <span className="truncate">{meta.label}</span>
+                        </button>
+
+                        <div className="flex items-center gap-0.5">
+                          {/* Reorder Up */}
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMoveSection(secKey, "up");
+                            }}
+                            className={`p-1 rounded cursor-pointer ${
+                              idx === 0
+                                ? "text-zinc-300 dark:text-zinc-700 cursor-not-allowed"
+                                : "text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                            }`}
+                            title="Move section up"
+                          >
+                            <ArrowUp className="w-3 h-3" />
+                          </button>
+
+                          {/* Reorder Down */}
+                          <button
+                            type="button"
+                            disabled={idx === arr.length - 1}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMoveSection(secKey, "down");
+                            }}
+                            className={`p-1 rounded cursor-pointer ${
+                              idx === arr.length - 1
+                                ? "text-zinc-300 dark:text-zinc-700 cursor-not-allowed"
+                                : "text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                            }`}
+                            title="Move section down"
+                          >
+                            <ArrowDown className="w-3 h-3" />
+                          </button>
+
+                          {/* Visibility Toggle */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleVisibility(secKey);
+                            }}
+                            className={`p-1 rounded cursor-pointer ${
+                              isVisible
+                                ? "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                                : "text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                            }`}
+                            title={isVisible ? "Hide section" : "Unhide section"}
+                          >
+                            {isVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Template Selector Button */}
+            <div className="relative">
+              <button
+                onClick={() => setIsTemplateMenuOpen(!isTemplateMenuOpen)}
+                className="h-9 px-3 rounded-lg bg-indigo-700/80 hover:bg-indigo-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span className="capitalize">
+                  {TEMPLATES.find((t) => t.id === resumeData.templateId)?.name.split(" ")[0] || "Template"}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+              </button>
+
+              {isTemplateMenuOpen && (
+                <div className="absolute left-0 top-11 w-64 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-xl border border-zinc-200 dark:border-zinc-800 p-1.5 z-50">
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                    Select Template
+                  </div>
+                  {TEMPLATES.map((tpl) => (
+                    <button
+                      key={tpl.id}
+                      onClick={() => handleTemplateSelect(tpl.id)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex flex-col cursor-pointer ${
+                        resumeData.templateId === tpl.id
+                          ? "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold"
+                          : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>{tpl.name}</span>
+                        {resumeData.templateId === tpl.id && (
+                          <Check className="w-3.5 h-3.5 text-indigo-600" />
+                        )}
+                      </div>
+                      <span className="text-[10px] text-zinc-400 mt-0.5">{tpl.tag}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* View format pills */}
+            <div className="flex items-center bg-indigo-800/60 p-0.5 rounded-lg text-xs font-semibold">
+              <button
+                onClick={() => setPreviewFormat("html")}
+                className={`px-2.5 py-1.5 rounded-md transition-colors cursor-pointer ${
+                  previewFormat === "html" ? "bg-white text-indigo-700 shadow-xs" : "text-white/80 hover:text-white"
+                }`}
+              >
+                HTML
+              </button>
+              <button
+                onClick={() => setPreviewFormat("pdf")}
+                className={`px-2.5 py-1.5 rounded-md transition-colors cursor-pointer ${
+                  previewFormat === "pdf" ? "bg-white text-indigo-700 shadow-xs" : "text-white/80 hover:text-white"
+                }`}
+              >
+                PDF
+              </button>
+              <button
+                onClick={() => setPreviewFormat("tex")}
+                className={`px-2.5 py-1.5 rounded-md transition-colors cursor-pointer ${
+                  previewFormat === "tex" ? "bg-white text-indigo-700 shadow-xs" : "text-white/80 hover:text-white"
+                }`}
+              >
+                .tex
+              </button>
+            </div>
+
+            {/* Download .tex */}
+            <button
+              onClick={handleDownloadTex}
+              className="h-9 px-3 rounded-lg bg-indigo-700/80 hover:bg-indigo-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Download LaTeX source file"
+            >
+              <FileCode className="w-3.5 h-3.5 text-amber-300" />
+              <span>Download .tex</span>
+            </button>
+
+            {/* Primary Download PDF (Screenshot Match!) */}
+            <button
               onClick={handleDownloadPdf}
               disabled={isDownloading}
-              className="h-10 text-xs rounded-xl gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 shadow-md shadow-blue-500/20"
+              className="h-9 px-4 rounded-lg bg-white hover:bg-zinc-100 text-[#5046e5] text-xs font-bold shadow-md flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
             >
-              {isDownloading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4" />
-              )}
-              <span>Download PDF</span>
-            </Button>
-
-            <Button
-              onClick={handleSaveToCloud}
-              disabled={isSaving}
-              className="h-10 text-xs rounded-xl gap-1.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold px-4 shadow-md"
-            >
-              {isSaving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Cloud className="w-4 h-4" />
-              )}
-              <span>{user ? "Save to Cloud" : "Login to Save"}</span>
-            </Button>
+              <Download className="w-3.5 h-3.5 text-[#5046e5]" />
+              <span>{isDownloading ? "Generating..." : "Download PDF"}</span>
+            </button>
           </div>
         </div>
 
-        {/* LOGGED IN / GUEST NOTIFICATION BANNER */}
-        {!user ? (
-          <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-4 flex items-center justify-between text-xs text-amber-900 dark:text-amber-300">
+        {/* Right Actions: Template Switcher on Mobile, Reset Button */}
+        <div className="flex items-center gap-2">
+          {/* Mobile Download PDF button */}
+          <button
+            onClick={handleDownloadPdf}
+            disabled={isDownloading}
+            className="lg:hidden h-8 px-3 rounded-lg bg-white text-indigo-600 text-xs font-bold flex items-center gap-1"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>PDF</span>
+          </button>
+
+          {/* Reset button (matching screenshot) */}
+          <button
+            onClick={handleReset}
+            className="h-9 px-3 rounded-lg border border-white/20 hover:bg-white/10 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Reset to default sample data"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Reset</span>
+          </button>
+        </div>
+      </header>
+
+      {/* ── MAIN WORKSPACE (SPLIT 2-COLUMN LAYOUT) ── */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+        {/* ── LEFT PANEL: FORM EDITOR ── */}
+        <div className="w-full md:w-1/2 lg:w-[48%] h-full flex flex-col border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 overflow-hidden">
+          <ResumeForm
+            data={resumeData}
+            onChange={setResumeData}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
+        </div>
+
+        {/* ── RIGHT PANEL: LIVE PDF PREVIEW (SCREENSHOT MATCH!) ── */}
+        <div
+          ref={previewContainerRef}
+          className="w-full md:w-1/2 lg:w-[52%] h-full flex flex-col bg-zinc-800 text-white overflow-hidden"
+        >
+          {/* Preview Toolbar (Matching Screenshot Header) */}
+          <div className="h-10 bg-zinc-900 border-b border-zinc-700/80 px-4 flex items-center justify-between text-xs text-zinc-300 shrink-0 select-none">
+            <div className="flex items-center gap-3">
+              <span className="font-bold tracking-wider text-[11px] text-zinc-400 uppercase">
+                PDF Preview
+              </span>
+              <span className="text-zinc-600">|</span>
+              <span className="text-[11px] text-zinc-400 capitalize">
+                {TEMPLATES.find((t) => t.id === resumeData.templateId)?.name}
+              </span>
+            </div>
+
+            {/* Center: Zoom Controls */}
+            <div className="flex items-center gap-1 bg-zinc-800 px-2 py-0.5 rounded-md border border-zinc-700">
+              <button
+                onClick={() => setZoomLevel((z) => Math.max(z - 10, 40))}
+                className="p-1 text-zinc-400 hover:text-white cursor-pointer"
+                title="Zoom Out"
+              >
+                <ZoomOut className="w-3 h-3" />
+              </button>
+              <span className="text-[11px] font-mono min-w-10 text-center">{zoomLevel}%</span>
+              <button
+                onClick={() => setZoomLevel((z) => Math.min(z + 10, 150))}
+                className="p-1 text-zinc-400 hover:text-white cursor-pointer"
+                title="Zoom In"
+              >
+                <ZoomIn className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* Right: Dimension & Print */}
             <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-              <span>
-                You are currently building as a <strong>Guest</strong>. You can live edit and download PDFs for free.{" "}
-                <Link href="/login" className="underline font-bold hover:text-amber-700">
-                  Log in
-                </Link>{" "}
-                to save resumes permanently on Cloudinary & access edit history.
+              <span className="text-[10px] text-zinc-400 hidden sm:inline">
+                A4 — 210 × 297 mm
               </span>
+              <button
+                onClick={handleNativePrint}
+                className="p-1.5 text-zinc-400 hover:text-white rounded hover:bg-zinc-800 transition-colors cursor-pointer"
+                title="Print Document"
+              >
+                <Printer className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <Link
-              href="/login"
-              className="shrink-0 bg-amber-600 text-white font-bold px-3 py-1.5 rounded-xl hover:bg-amber-700 transition-colors"
-            >
-              Log In
-            </Link>
-          </div>
-        ) : (
-          <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl p-3.5 flex items-center gap-2 text-xs text-emerald-900 dark:text-emerald-300">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span>
-              Signed in as <strong>{user.name}</strong>. Your resumes will be safely synced to Cloudinary and MongoDB database history.
-            </span>
-          </div>
-        )}
-
-        {/* MAIN WORKSPACE GRID */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* LEFT: FORM EDITOR (5 COLS) */}
-          <div className="lg:col-span-5 space-y-6">
-            <ResumeForm data={resumeData} onChange={setResumeData} />
           </div>
 
-          {/* RIGHT: LIVE PREVIEW (7 COLS) */}
-          <div className="lg:col-span-7 sticky top-24 space-y-3">
-            <div className="flex items-center justify-between text-xs text-zinc-500 px-1">
-              <span className="font-bold flex items-center gap-1 text-zinc-700 dark:text-zinc-300">
-                <FileCheck className="w-4 h-4 text-blue-600" /> Live PDF Preview (A4 Scale)
-              </span>
-              <span className="text-[11px] bg-zinc-200 dark:bg-zinc-800 px-2 py-0.5 rounded font-mono">
-                {resumeData.templateId.toUpperCase()} TEMPLATE
-              </span>
-            </div>
-
-            <div className="bg-zinc-300/60 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 p-4 sm:p-6 rounded-3xl shadow-inner overflow-auto max-h-[85vh]">
-              <ResumePreview data={resumeData} />
-            </div>
+          {/* Paper View Container */}
+          <div className="flex-1 overflow-auto p-4 sm:p-8 flex justify-center items-start bg-zinc-850">
+            {previewFormat === "tex" ? (
+              <div className="w-full max-w-2xl bg-zinc-950 p-6 rounded-xl border border-zinc-800 font-mono text-xs text-emerald-400 overflow-x-auto shadow-2xl">
+                <div className="flex justify-between items-center pb-3 mb-3 border-b border-zinc-800">
+                  <span className="text-zinc-400 font-bold">LaTeX (.tex) Source Output</span>
+                  <button
+                    onClick={handleDownloadTex}
+                    className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-sans font-bold cursor-pointer"
+                  >
+                    Download .tex
+                  </button>
+                </div>
+                <pre className="whitespace-pre-wrap">{generateLatex(resumeData)}</pre>
+              </div>
+            ) : (
+              <div
+                style={{
+                  transform: `scale(${zoomLevel / 100})`,
+                  transformOrigin: "top center",
+                  transition: "transform 0.15s ease-out",
+                }}
+                className="origin-top"
+              >
+                <ResumePreview data={resumeData} />
+              </div>
+            )}
           </div>
         </div>
       </div>
-
-      {/* HISTORY MODAL */}
-      <ResumeHistoryModal
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        onSelectResume={setResumeData}
-      />
     </div>
   );
+}
+
+// LaTeX Generator Helper
+function generateLatex(data: IResumeData): string {
+  const {
+    personalInfo,
+    visibility = {},
+    objective,
+    skillGroups,
+    experience,
+    projects,
+    education,
+    certifications,
+    achievements,
+  } = data;
+
+  const escapeLatex = (str?: string) => {
+    if (!str) return "";
+    let clean = str
+      .replace(/&/g, "\\&")
+      .replace(/%/g, "\\%")
+      .replace(/\$/g, "\\$")
+      .replace(/#/g, "\\#")
+      .replace(/~/g, "\\textasciitilde{}");
+
+    // Convert markdown highlights to proper LaTeX commands
+    clean = clean.replace(/==(.*?)==/g, "\\colorbox{yellow}{$1}");
+    clean = clean.replace(/\*\*(.*?)\*\*/g, "\\textbf{$1}");
+    clean = clean.replace(/\*(.*?)\*/g, "\\textit{$1}");
+    clean = clean.replace(/__(.*?)__/g, "\\underline{$1}");
+
+    return clean;
+  };
+
+  return `%-------------------------
+% Resume in LaTeX
+% Generated by King Resume Builder
+%------------------------
+
+\\documentclass[letterpaper,11pt]{article}
+\\usepackage{latexsym}
+\\usepackage[empty]{fullpage}
+\\usepackage{titlesec}
+\\usepackage{marvosym}
+\\usepackage[usenames,dvipsnames]{color}
+\\usepackage{verbatim}
+\\usepackage{enumitem}
+\\usepackage[hidelinks]{hyperref}
+\\usepackage{fancyhdr}
+\\usepackage[english]{babel}
+\\usepackage{tabularx}
+
+\\pagestyle{fancy}
+\\fancyhf{}
+\\renewcommand{\\headrulewidth}{0pt}
+\\renewcommand{\\footrulewidth}{0pt}
+
+\\addtolength{\\oddsidemargin}{-0.5in}
+\\addtolength{\\evensidemargin}{-0.5in}
+\\addtolength{\\textwidth}{1in}
+\\addtolength{\\topmargin}{-.5in}
+\\addtolength{\\textheight}{1.0in}
+
+\\urlstyle{same}
+\\raggedbottom
+\\raggedright
+\\setlength{\\tabcolsep}{0in}
+
+\\titleformat{\\section}{
+  \\vspace{-4pt}\\scshape\\raggedright\\large
+}{}{0em}{}[\\color{black}\\titlerule \\vspace{-5pt}]
+
+\\begin{document}
+
+%----------HEADING----------
+\\begin{center}
+    \\textbf{\\Huge \\scshape ${escapeLatex(personalInfo.name || "Your Name")}} \\\\ \\vspace{1pt}
+    \\small ${escapeLatex(personalInfo.phone || "")} $|$ \\href{mailto:${escapeLatex(personalInfo.email)}}{${escapeLatex(personalInfo.email || "")}} $|$ ${escapeLatex(personalInfo.address || "")} 
+    ${personalInfo.customLinks?.map((l) => `$|$ \\href{${l.url}}{${escapeLatex(l.label)}}`).join(" ") || ""}
+\\end{center}
+
+${(data.sectionOrder && data.sectionOrder.length > 0 ? data.sectionOrder : DEFAULT_SECTION_ORDER)
+  .map((secKey) => {
+    switch (secKey) {
+      case "summary":
+        if (visibility.showObjective === false || !objective) return "";
+        return `
+%-----------PROFESSIONAL SUMMARY-----------
+\\section{Professional Summary}
+${escapeLatex(objective)}
+`;
+
+      case "skills":
+        if (visibility.showSkills === false || (!skillGroups?.length && !data.skills?.length)) return "";
+        return `
+%-----------TECHNICAL SKILLS-----------
+\\section{Technical Skills}
+\\begin{itemize}[leftmargin=0.15in, label={}]
+    \\small{\\item{
+        ${skillGroups?.map((sg) => `\\textbf{${escapeLatex(sg.category)}}{: ${escapeLatex(sg.skills)}} \\\\`).join("\n        ") || ""}
+    }}
+\\end{itemize}
+`;
+
+      case "experience":
+        if (visibility.showExperience === false || !experience?.length) return "";
+        return `
+%-----------EXPERIENCE-----------
+\\section{Professional Experience}
+\\begin{itemize}[leftmargin=0.15in, label={}]
+${experience?.map((exp) => `  \\item
+    \\begin{tabular*}{0.97\\textwidth}[t]{l@{\\extracolsep{\\fill}}r}
+      \\textbf{${escapeLatex(exp.company || "")}} & ${escapeLatex(exp.duration || "")} \\\\
+      \\textit{\\small ${escapeLatex(exp.title || "")}${exp.location ? ` - ${escapeLatex(exp.location)}` : ""}} & \\\\
+    \\end{tabular*}\\vspace{-7pt}
+    \\begin{itemize}
+      ${(exp.points || (exp.details ? exp.details.split("\n") : [])).filter((p) => p.trim()).map((p) => `\\item \\small{${escapeLatex(p)}}`).join("\n      ")}
+    \\end{itemize}`).join("\n")}
+\\end{itemize}
+`;
+
+      case "projects":
+        if (visibility.showProjects === false || !projects?.length) return "";
+        return `
+%-----------PROJECTS-----------
+\\section{Projects}
+\\begin{itemize}[leftmargin=0.15in, label={}]
+${projects?.map((proj) => `  \\item
+    \\begin{tabular*}{0.97\\textwidth}[t]{l@{\\extracolsep{\\fill}}r}
+      \\textbf{${escapeLatex(proj.title || "")}} ${proj.techStack ? `$|$ \\textit{\\small ${escapeLatex(proj.techStack)}}` : ""} & ${escapeLatex(proj.duration || "")} \\\\
+    \\end{tabular*}\\vspace{-7pt}
+    \\begin{itemize}
+      ${(proj.points || []).map((p) => `\\item \\small{${escapeLatex(p)}}`).join("\n      ")}
+    \\end{itemize}`).join("\n")}
+\\end{itemize}
+`;
+
+      case "education":
+        if (visibility.showEducation === false || !education?.length) return "";
+        return `
+%-----------EDUCATION-----------
+\\section{Education}
+\\begin{itemize}[leftmargin=0.15in, label={}]
+${education?.map((edu) => `  \\item
+    \\begin{tabular*}{0.97\\textwidth}[t]{l@{\\extracolsep{\\fill}}r}
+      \\textbf{${escapeLatex(edu.qualification || "")}} & ${escapeLatex(edu.year || "")} \\\\
+      \\textit{\\small ${escapeLatex(edu.board || "")}} & \\textit{\\small ${escapeLatex(edu.percentage || "")}} \\\\
+    \\end{tabular*}\\vspace{-7pt}`).join("\n")}
+\\end{itemize}
+`;
+
+      case "certifications":
+        if (visibility.showCertifications === false || !certifications?.length) return "";
+        return `
+%-----------CERTIFICATIONS-----------
+\\section{Certifications}
+\\begin{itemize}[leftmargin=0.15in, label={}]
+${certifications?.map((c) => `  \\item \\small{\\textbf{${escapeLatex(c.name)}}${c.issuer ? ` -- ${escapeLatex(c.issuer)}` : ""}${c.date ? ` (${escapeLatex(c.date)})` : ""}}`).join("\n")}
+\\end{itemize}
+`;
+
+      case "achievements":
+        if (visibility.showAchievements === false || !achievements?.length) return "";
+        return `
+%-----------ACHIEVEMENTS-----------
+\\section{Achievements}
+\\begin{itemize}[leftmargin=0.15in, label={}]
+${achievements?.map((a) => `  \\item \\small{${escapeLatex(a.text)}}`).join("\n")}
+\\end{itemize}
+`;
+
+      default:
+        return "";
+    }
+  })
+  .filter(Boolean)
+  .join("\n")}
+
+\\end{document}
+`;
 }
