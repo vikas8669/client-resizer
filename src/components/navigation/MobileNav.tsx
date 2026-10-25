@@ -44,9 +44,7 @@ interface MobileNavProps {
 export function MobileNav({ user }: MobileNavProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [expandedCategories, setExpandedCategories] = React.useState<Record<string, boolean>>({
-    "photo-tools": true,
     "ecard-cutter": true,
-    "document-id-tools": true,
   });
   const [expandedSubmenus, setExpandedSubmenus] = React.useState<Record<string, boolean>>({});
 
@@ -150,16 +148,6 @@ export function MobileNav({ user }: MobileNavProps) {
               >
                 Get Started Free
               </Link>
-              <Link
-                href="/resume-builder"
-                onClick={closeSheet}
-                className={cn(
-                  buttonVariants({ variant: "outline" }),
-                  "w-full rounded-xl py-5 font-semibold text-xs border-blue-200 dark:border-blue-900/40 text-blue-600 dark:text-blue-400"
-                )}
-              >
-                Resume Maker ✨
-              </Link>
             </div>
 
             <Separator className="my-3 opacity-60" />
@@ -169,6 +157,49 @@ export function MobileNav({ user }: MobileNavProps) {
               {NAVIGATION_CONFIG.map((category) => {
                 const CategoryIcon = category.icon;
                 const isExpanded = !!expandedCategories[category.id];
+
+                // Single direct link
+                if (category.href || !category.items) {
+                  const isActive = isHrefActive(category.href || "");
+                  return (
+                    <Link
+                      key={category.id}
+                      href={category.href || "/"}
+                      onClick={closeSheet}
+                      className={cn(
+                        "w-full px-4 py-3.5 flex items-center justify-between text-left rounded-2xl border transition-colors",
+                        isActive
+                          ? "bg-blue-50/80 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900/40 text-blue-600 dark:text-blue-400 font-bold"
+                          : "border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-zinc-900/30 hover:bg-zinc-100/70 dark:hover:bg-white/5 text-zinc-900 dark:text-white font-semibold"
+                      )}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {CategoryIcon && (
+                          <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary/10 text-primary shrink-0">
+                            <CategoryIcon className="w-4 h-4" />
+                          </div>
+                        )}
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                              {category.title}
+                            </span>
+                            {category.badge && (
+                              <span className="bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[10px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider">
+                                {category.badge}
+                              </span>
+                            )}
+                          </div>
+                          {category.description && (
+                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate max-w-[200px]">
+                              {category.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                }
 
                 return (
                   <div
@@ -215,7 +246,7 @@ export function MobileNav({ user }: MobileNavProps) {
                     </button>
 
                     {/* Category Items */}
-                    {isExpanded && (
+                    {isExpanded && category.items && (
                       <div className="px-2 pb-2 pt-1 border-t border-zinc-100 dark:border-white/5 space-y-1">
                         {category.items.map((item) => {
                           const ItemIcon = item.icon;

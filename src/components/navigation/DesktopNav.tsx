@@ -31,7 +31,10 @@ export function DesktopNav() {
   };
 
   const isCategoryActive = (category: NavCategory) => {
-    return category.items.some((item) => {
+    if (category.href) {
+      return isHrefActive(category.href);
+    }
+    return (category.items || []).some((item) => {
       if (isHrefActive(item.href)) return true;
       if (item.subItems?.some((sub) => isHrefActive(sub.href))) return true;
       return false;
@@ -40,12 +43,48 @@ export function DesktopNav() {
 
   return (
     <nav
-      className="hidden md:flex items-center gap-1 lg:gap-2"
+      className="hidden md:flex items-center gap-1.5 lg:gap-2.5"
       aria-label="Main Navigation"
     >
       {NAVIGATION_CONFIG.map((category) => {
         const CategoryIcon = category.icon;
         const categoryActive = isCategoryActive(category);
+
+        // Render direct single link if category has a direct href or no dropdown items
+        if (category.href || !category.items) {
+          return (
+            <Link
+              key={category.id}
+              href={category.href || "/"}
+              className={cn(
+                "group inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 outline-none select-none cursor-pointer",
+                "hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-white/10 dark:hover:text-white",
+                "focus-visible:ring-2 focus-visible:ring-primary/40",
+                categoryActive
+                  ? "text-blue-600 dark:text-blue-400 font-semibold bg-blue-50/70 dark:bg-blue-950/40"
+                  : "text-zinc-600 hover:text-black dark:text-zinc-300 dark:hover:text-white"
+              )}
+              aria-label={category.title}
+            >
+              {CategoryIcon && (
+                <CategoryIcon
+                  className={cn(
+                    "w-4 h-4 transition-colors",
+                    categoryActive
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-zinc-400 group-hover:text-zinc-600 dark:text-zinc-500 dark:group-hover:text-zinc-300"
+                  )}
+                />
+              )}
+              <span>{category.title}</span>
+              {category.badge && (
+                <span className="bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[10px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider">
+                  {category.badge}
+                </span>
+              )}
+            </Link>
+          );
+        }
 
         return (
           <DropdownMenu key={category.id}>

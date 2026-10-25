@@ -32,7 +32,10 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Filter
+  Filter,
+  FileText,
+  Sparkles,
+  Zap
 } from 'lucide-react';
 import { useFeedback } from '@/hooks/useFeedback';
 import { Button } from '@/components/ui/button';
@@ -109,6 +112,52 @@ function AdminDashboardContent() {
   const [subSearchQuery, setSubSearchQuery] = useState('');
   const [subStatusFilter, setSubStatusFilter] = useState<'all' | 'active' | 'expired'>('all');
 
+  // Resume Pay-Per-Download state
+  const [resumePacks, setResumePacks] = useState<Array<{
+    id: string;
+    name: string;
+    credits: number;
+    priceRupees: number;
+    tag: string;
+    badge?: string;
+    description: string;
+    isActive: boolean;
+  }>>([
+    {
+      id: '1_download',
+      name: '1 Download',
+      credits: 1,
+      priceRupees: 9,
+      tag: 'Best for students and freshers',
+      badge: 'Starter',
+      description: 'Ideal for urgent single job applications',
+      isActive: true,
+    },
+    {
+      id: '5_downloads',
+      name: '5 Downloads',
+      credits: 5,
+      priceRupees: 35,
+      tag: '₹7 per download',
+      badge: 'Popular',
+      description: 'Great value for active job seekers',
+      isActive: true,
+    },
+    {
+      id: '10_downloads',
+      name: '10 Downloads',
+      credits: 10,
+      priceRupees: 59,
+      tag: '₹5.90 per download',
+      badge: 'Best Value',
+      description: 'Maximum savings for ongoing career updates',
+      isActive: true,
+    },
+  ]);
+  const [freeAdminDownloads, setFreeAdminDownloads] = useState<boolean>(true);
+  const [isResumePlansLoading, setIsResumePlansLoading] = useState(false);
+  const [isSavingResumePlans, setIsSavingResumePlans] = useState(false);
+
   const { data: analytics, isLoading } = useQuery({
     queryKey: ['analytics'],
     queryFn: async () => {
@@ -160,11 +209,72 @@ function AdminDashboardContent() {
     }
   };
 
+  const fetchResumePricingSettings = async () => {
+    try {
+      setIsResumePlansLoading(true);
+      const res = await apiClient.get(ENDPOINTS.RESUME_ADMIN_SETTINGS);
+      if (res.data?.success && res.data.settings) {
+        const s = res.data.settings;
+        setFreeAdminDownloads(s.freeAdminDownloads !== false);
+        if (Array.isArray(s.packs) && s.packs.length > 0) {
+          setResumePacks(
+            s.packs.map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              credits: p.credits,
+              priceRupees: p.priceRupees ?? Math.round((p.pricePaise || 0) / 100),
+              tag: p.tag || '',
+              badge: p.badge || '',
+              description: p.description || '',
+              isActive: p.isActive !== false,
+            }))
+          );
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to load resume pricing:', err);
+    } finally {
+      setIsResumePlansLoading(false);
+    }
+  };
+
+  const handleSaveResumePrices = async () => {
+    try {
+      setIsSavingResumePlans(true);
+      const res = await apiClient.put(ENDPOINTS.RESUME_ADMIN_SETTINGS, {
+        freeAdminDownloads,
+        packs: resumePacks.map((p) => ({
+          id: p.id,
+          name: p.name,
+          credits: p.credits,
+          priceRupees: Number(p.priceRupees) || 0,
+          tag: p.tag,
+          badge: p.badge,
+          description: p.description,
+          isActive: p.isActive,
+        })),
+      });
+
+      if (res.data?.success) {
+        toast.success('Resume download prices & settings updated successfully!');
+        if (res.data.settings?.packs) {
+          setResumePacks(res.data.settings.packs);
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to save resume prices:', err);
+      toast.error(err?.response?.data?.message || 'Failed to update resume prices');
+    } finally {
+      setIsSavingResumePlans(false);
+    }
+  };
+
   useEffect(() => {
     setIsMounted(true);
     refetch();
     fetchPricingSettings();
     fetchSubscriptions();
+    fetchResumePricingSettings();
   }, []);
 
   const formatDate = (isoString?: string) => {
@@ -1210,6 +1320,236 @@ function AdminDashboardContent() {
                     <Save className="w-4 h-4 mr-2" />
                   )}
                   <span>Save All Changes</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* RESUME PAY-PER-DOWNLOAD PRICING MANAGEMENT */}
+          <Card className="rounded-3xl border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+            <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/80 pb-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-1">
+                    <FileText className="w-5 h-5" />
+                    <span className="text-xs font-bold uppercase tracking-wider">
+                      Resume Pay-Per-Download Management
+                    </span>
+                  </div>
+                  <CardTitle className="text-xl font-bold">
+                    Edit Resume Download Packs & Pricing
+                  </CardTitle>
+                  <CardDescription>
+                    Customize prices in ₹ (Rupees) for resume download packs. Any price or credit updates reflect immediately in customer checkout.
+                  </CardDescription>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchResumePricingSettings}
+                    disabled={isResumePlansLoading || isSavingResumePlans}
+                    className="rounded-xl gap-2 cursor-pointer font-semibold"
+                  >
+                    <RefreshCw className={cn('w-4 h-4', isResumePlansLoading && 'animate-spin')} />
+                    <span>Reset</span>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleSaveResumePrices}
+                    disabled={isResumePlansLoading || isSavingResumePlans}
+                    className="rounded-xl gap-2 font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 cursor-pointer"
+                  >
+                    {isSavingResumePlans ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    <span>Save Resume Prices</span>
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="pt-6 space-y-6">
+              {/* Free Unlimited Admin Downloads Toggle */}
+              <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/70 dark:border-indigo-900/40 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <Label className="text-sm font-bold text-zinc-900 dark:text-white">
+                      Admin Role: Free Unlimited Downloads
+                    </Label>
+                  </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    {freeAdminDownloads
+                      ? 'Active: Administrator accounts download resumes freely without consuming credits or hitting paywalls.'
+                      : 'Disabled: Administrators consume normal download credits like regular users.'}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setFreeAdminDownloads(!freeAdminDownloads)}
+                  className={cn(
+                    'w-12 h-6 rounded-full transition-colors relative cursor-pointer focus:outline-none shrink-0',
+                    freeAdminDownloads ? 'bg-indigo-600' : 'bg-zinc-300 dark:bg-zinc-700'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'w-5 h-5 rounded-full bg-white transition-transform absolute top-0.5',
+                      freeAdminDownloads ? 'right-0.5' : 'left-0.5'
+                    )}
+                  />
+                </button>
+              </div>
+
+              {/* Resume Packs Grid */}
+              {isResumePlansLoading && resumePacks.length === 0 ? (
+                <div className="py-12 flex justify-center">
+                  <RefreshCw className="w-8 h-8 animate-spin text-indigo-500" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  {resumePacks.map((pack, index) => {
+                    const price = pack.priceRupees || 0;
+                    const credits = pack.credits || 1;
+                    const perDownload = (price / credits).toFixed(2);
+
+                    return (
+                      <div
+                        key={pack.id}
+                        className={cn(
+                          'p-5 rounded-2xl border transition-all flex flex-col justify-between',
+                          pack.isActive
+                            ? 'border-zinc-200 dark:border-zinc-700/80 bg-zinc-50/50 dark:bg-zinc-800/25 shadow-xs'
+                            : 'border-dashed border-zinc-300 dark:border-zinc-800 opacity-60 bg-transparent'
+                        )}
+                      >
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="text-base font-bold text-zinc-900 dark:text-white">
+                                {pack.name}
+                              </h3>
+                              <span className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">
+                                {pack.credits} {pack.credits === 1 ? 'Download' : 'Downloads'}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = [...resumePacks];
+                                updated[index].isActive = !updated[index].isActive;
+                                setResumePacks(updated);
+                              }}
+                              className={cn(
+                                'text-[11px] font-bold px-2.5 py-1 rounded-full cursor-pointer transition-colors',
+                                pack.isActive
+                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                  : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                              )}
+                            >
+                              {pack.isActive ? 'Active' : 'Disabled'}
+                            </button>
+                          </div>
+
+                          {/* Price in Rupees */}
+                          <div>
+                            <Label className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                              Price (₹)
+                            </Label>
+                            <div className="relative mt-1">
+                              <span className="absolute left-3 top-2.5 text-xs text-indigo-600 font-bold">
+                                ₹
+                              </span>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={pack.priceRupees}
+                                onChange={(e) => {
+                                  const updated = [...resumePacks];
+                                  updated[index].priceRupees = parseFloat(e.target.value) || 0;
+                                  setResumePacks(updated);
+                                }}
+                                className="pl-7 rounded-xl text-sm font-bold bg-white dark:bg-zinc-900"
+                              />
+                            </div>
+                            <p className="text-[11px] text-zinc-400 mt-1">
+                              Calculated: ₹{perDownload} per download
+                            </p>
+                          </div>
+
+                          {/* Tag / Per Download Tagline */}
+                          <div>
+                            <Label className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                              Tagline / Label
+                            </Label>
+                            <Input
+                              type="text"
+                              value={pack.tag}
+                              onChange={(e) => {
+                                const updated = [...resumePacks];
+                                updated[index].tag = e.target.value;
+                                setResumePacks(updated);
+                              }}
+                              placeholder="e.g. ₹7 per download"
+                              className="mt-1 rounded-xl text-xs bg-white dark:bg-zinc-900"
+                            />
+                          </div>
+
+                          {/* Credits Count */}
+                          <div>
+                            <Label className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                              Credits Granted
+                            </Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={pack.credits}
+                              onChange={(e) => {
+                                const updated = [...resumePacks];
+                                updated[index].credits = parseInt(e.target.value) || 1;
+                                setResumePacks(updated);
+                              }}
+                              className="mt-1 rounded-xl text-xs font-semibold bg-white dark:bg-zinc-900"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Live customer badge */}
+                        <div className="mt-4 pt-3 border-t border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
+                          <span>Status</span>
+                          <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                            {pack.isActive ? 'Shown to users' : 'Hidden from users'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Save Button */}
+              <div className="pt-2 flex justify-end">
+                <Button
+                  type="button"
+                  onClick={handleSaveResumePrices}
+                  disabled={isResumePlansLoading || isSavingResumePlans}
+                  className="rounded-xl px-6 font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20 cursor-pointer"
+                >
+                  {isSavingResumePlans ? (
+                    <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  <span>Save Resume Pricing</span>
                 </Button>
               </div>
             </CardContent>

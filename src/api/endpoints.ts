@@ -39,6 +39,11 @@ export const ENDPOINTS = {
 
   RESUMES: '/api/resumes',
   RESUME_BY_ID: (id: string) => `/api/resumes/${id}`,
+  RESUME_PAYMENT_STATUS: '/api/resumes/payment/status',
+  RESUME_PAYMENT_ORDER: '/api/resumes/payment/order',
+  RESUME_PAYMENT_VERIFY: '/api/resumes/payment/verify',
+  RESUME_CONSUME_CREDIT: '/api/resumes/consume-credit',
+  RESUME_ADMIN_SETTINGS: '/api/resumes/admin/settings',
 };
 
 // Log API configuration in development

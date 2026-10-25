@@ -19,11 +19,17 @@ import {
   DEFAULT_SECTION_ORDER,
   SECTION_METADATA,
 } from "@/features/resume/types";
+import apiClient from "@/api/api";
+import { ENDPOINTS } from "@/api/endpoints";
+import { useResumePayment } from "@/features/resume/hooks/useResumePayment";
+import { ResumePaymentModal } from "@/features/resume/components/ResumePaymentModal";
+import { ResumeAuthModal } from "@/features/resume/components/ResumeAuthModal";
 
 import {
   Download,
   RotateCcw,
   Sparkles,
+  Zap,
   FileText,
   FileCode,
   ZoomIn,
@@ -47,6 +53,21 @@ export default function ResumeBuilderPage() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isTemplateMenuOpen, setIsTemplateMenuOpen] = useState(false);
   const [isSectionsMenuOpen, setIsSectionsMenuOpen] = useState(false);
+
+  const {
+    credits,
+    isLoggedIn,
+    isAdmin,
+    isFreeAdmin,
+    plans,
+    isPaying,
+    isPaymentModalOpen,
+    setIsPaymentModalOpen,
+    isAuthModalOpen,
+    setIsAuthModalOpen,
+    purchasePack,
+    requestDownloadWithCredit,
+  } = useResumePayment(resumeData._id);
 
   const previewContainerRef = useRef<HTMLDivElement>(null);
 
@@ -313,6 +334,43 @@ export default function ResumeBuilderPage() {
     }
   };
 
+  // Secure Pay-Per-Download Credit Check & PDF Generation
+  const handleDownloadClick = async () => {
+    if (!isLoggedIn) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+
+    let currentId = resumeData._id;
+    if (!currentId) {
+      try {
+        const saveRes = await apiClient.post(ENDPOINTS.RESUMES, {
+          title: resumeData.title || `${resumeData.personalInfo.name || "My"}'s Resume`,
+          templateId: resumeData.templateId,
+          personalInfo: resumeData.personalInfo,
+          visibility: resumeData.visibility,
+          objective: resumeData.objective,
+          education: resumeData.education,
+          experience: resumeData.experience,
+          customSections: resumeData.customSections,
+          skills: resumeData.skills,
+        });
+        if (saveRes.data?.data?._id) {
+          currentId = saveRes.data.data._id;
+          setResumeData((prev) => ({ ...prev, _id: currentId }));
+        }
+      } catch (e) {
+        currentId = `draft_${(resumeData.personalInfo.name || "resume").toLowerCase().replace(/\s+/g, "_")}`;
+      }
+    }
+
+    if (!currentId) {
+      currentId = `draft_${Date.now()}`;
+    }
+
+    await requestDownloadWithCredit(currentId, handleDownloadPdf);
+  };
+
   // Download .tex (LaTeX markup)
   const handleDownloadTex = () => {
     const texContent = generateLatex(resumeData);
@@ -559,9 +617,32 @@ export default function ResumeBuilderPage() {
               <span>Download .tex</span>
             </button>
 
-            {/* Primary Download PDF (Screenshot Match!) */}
+            {/* Download Credits / Admin Pill */}
+            {isLoggedIn ? (
+              isAdmin ? (
+                <Link
+                  href="/admin?tab=pricing"
+                  className="h-9 px-3 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-1.5 transition-colors border border-amber-400/40 shadow-xs"
+                  title="Admin role: Free unlimited downloads · Click to manage pricing"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                  <span>Admin · Free Downloads</span>
+                </Link>
+              ) : (
+                <button
+                  onClick={() => setIsPaymentModalOpen(true)}
+                  className="h-9 px-3 rounded-lg bg-indigo-800/80 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-indigo-400/25 shadow-xs"
+                  title="View download credits or buy more"
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                  <span>{credits} {credits === 1 ? "Credit" : "Credits"}</span>
+                </button>
+              )
+            ) : null}
+
+            {/* Primary Download PDF */}
             <button
-              onClick={handleDownloadPdf}
+              onClick={handleDownloadClick}
               disabled={isDownloading}
               className="h-9 px-4 rounded-lg bg-white hover:bg-zinc-100 text-[#5046e5] text-xs font-bold shadow-md flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
             >
@@ -573,9 +654,32 @@ export default function ResumeBuilderPage() {
 
         {/* Right Actions: Template Switcher on Mobile, Reset Button */}
         <div className="flex items-center gap-2">
+          {/* Mobile Download Credits Pill */}
+          {isLoggedIn ? (
+            isAdmin ? (
+              <Link
+                href="/admin?tab=pricing"
+                className="lg:hidden h-8 px-2 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-bold flex items-center gap-1 border border-amber-400/40"
+                title="Admin Free Downloads"
+              >
+                <Sparkles className="w-3 h-3 text-amber-400 fill-amber-400" />
+                <span>Admin</span>
+              </Link>
+            ) : (
+              <button
+                onClick={() => setIsPaymentModalOpen(true)}
+                className="lg:hidden h-8 px-2.5 rounded-lg bg-indigo-800/80 text-white text-xs font-semibold flex items-center gap-1 border border-indigo-400/25"
+                title="View download credits or buy more"
+              >
+                <Zap className="w-3 h-3 text-amber-300 fill-amber-300" />
+                <span>{credits}</span>
+              </button>
+            )
+          ) : null}
+
           {/* Mobile Download PDF button */}
           <button
-            onClick={handleDownloadPdf}
+            onClick={handleDownloadClick}
             disabled={isDownloading}
             className="lg:hidden h-8 px-3 rounded-lg bg-white text-indigo-600 text-xs font-bold flex items-center gap-1"
           >
@@ -688,6 +792,22 @@ export default function ResumeBuilderPage() {
           </div>
         </div>
       </div>
+
+      {/* Resume Download Credits Payment Modal */}
+      <ResumePaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        plans={plans}
+        currentCredits={credits}
+        onSelectPack={purchasePack}
+        isProcessing={isPaying}
+      />
+
+      {/* Guest Authentication Prompt Modal */}
+      <ResumeAuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </div>
   );
 }
