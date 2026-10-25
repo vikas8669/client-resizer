@@ -84,6 +84,7 @@ export function useEcardAccess() {
   const paymentEnabled = accessData?.paymentEnabled ?? true;
   const ecutterEnabled = accessData?.ecutterEnabled ?? true;
   const hasActiveSubscription = accessData?.hasActiveSubscription ?? false;
+  const subscription = accessData?.subscription;
   const freeMonthlyLimit = accessData?.freeMonthlyLimit ?? 5;
   const usedCount = accessData?.usedCount ?? 0;
   const remainingCount = accessData?.remainingCount ?? Math.max(0, freeMonthlyLimit - usedCount);
@@ -105,11 +106,23 @@ export function useEcardAccess() {
    * Initiate Razorpay Checkout for a selected plan
    */
   const subscribeToPlan = useCallback(
-    async (planId: string) => {
+    async (planId: string, options?: { allowExtension?: boolean }) => {
       if (isCheckingPayment) return;
 
       if (!isLoggedIn) {
         toast.error('Please sign in to purchase a subscription plan');
+        return;
+      }
+
+      // Check if user already has an active subscription for this plan to prevent duplicate payment
+      if (hasActiveSubscription && subscription?.planId === planId && !options?.allowExtension) {
+        toast.info(
+          `You already have an active subscription for this plan valid until ${
+            subscription.expiryDate
+              ? new Date(subscription.expiryDate).toLocaleDateString('en-IN')
+              : 'next period'
+          }. Duplicate payment is disabled.`
+        );
         return;
       }
 
@@ -119,7 +132,10 @@ export function useEcardAccess() {
         setIsCheckingPayment(true);
 
         // 1. Create order on backend
-        const orderRes = await apiClient.post(ENDPOINTS.ECARD_ORDER, { planId });
+        const orderRes = await apiClient.post(ENDPOINTS.ECARD_ORDER, {
+          planId,
+          allowExtension: options?.allowExtension === true,
+        });
         const { orderId, amount, currency, keyId, plan } = orderRes.data;
 
         if (!orderId || !keyId) {
@@ -202,7 +218,13 @@ export function useEcardAccess() {
         checkoutOpened = true;
       } catch (err: any) {
         console.error('Subscription error:', err);
-        toast.error(err?.response?.data?.message || err?.message || 'Could not initiate payment');
+        const errCode = err?.response?.data?.code;
+        const errMsg = err?.response?.data?.message || err?.message || 'Could not initiate payment';
+        if (errCode === 'ALREADY_SUBSCRIBED') {
+          toast.info(errMsg);
+        } else {
+          toast.error(errMsg);
+        }
       } finally {
         // Do not unlock immediately after Razorpay Checkout opens; doing so
         // permits another order to be started while the first is still active.
@@ -211,7 +233,7 @@ export function useEcardAccess() {
         }
       }
     },
-    [isLoggedIn, isCheckingPayment, currentUser, queryClient, refetch]
+    [isLoggedIn, isCheckingPayment, hasActiveSubscription, subscription, currentUser, queryClient, refetch]
   );
 
   return {

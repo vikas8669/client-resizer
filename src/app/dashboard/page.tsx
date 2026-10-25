@@ -27,7 +27,10 @@ import {
   Check,
   Percent,
   RefreshCw,
-  Clock
+  Clock,
+  ShieldCheck,
+  AlertTriangle,
+  FileText
 } from 'lucide-react';
 import apiClient from '@/api/api';
 import { ENDPOINTS } from '@/api/endpoints';
@@ -35,7 +38,16 @@ import { getStoredUser, logout } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useEcardAccess } from '@/features/ecard/hooks/useEcardAccess';
+import { useEcardAccess, FormattedPlan } from '@/features/ecard/hooks/useEcardAccess';
+import { useResumePayment } from '@/features/resume/hooks/useResumePayment';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 interface HistoryItem { 
   _id: string; 
@@ -58,6 +70,10 @@ export default function DashboardPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [planToConfirm, setPlanToConfirm] = useState<FormattedPlan | null>(null);
+
+  // Resume download credits
+  const { credits: resumeCredits } = useResumePayment();
 
   // E-Card subscription and plan access hook
   const {
@@ -156,6 +172,37 @@ export default function DashboardPage() {
   const daysRemaining = subscription?.expiryDate ? getDaysRemaining(subscription.expiryDate) : 0;
   const isExpired = subscription?.status === 'expired' || (subscription?.expiryDate && daysRemaining <= 0);
 
+  // Handle plan selection with duplicate payment prevention
+  const handlePlanClick = (plan: FormattedPlan) => {
+    const isCurrent = subscription?.planId === plan.id && hasActiveSubscription;
+    if (isCurrent) {
+      toast.info(
+        `You already have an active subscription for this plan (${plan.name}) valid until ${
+          subscription?.expiryDate
+            ? new Date(subscription.expiryDate).toLocaleDateString('en-IN')
+            : 'expiry'
+        }. Duplicate payment is disabled.`
+      );
+      return;
+    }
+
+    if (hasActiveSubscription) {
+      // User has an active subscription; request explicit confirmation before opening payment
+      setPlanToConfirm(plan);
+      return;
+    }
+
+    // Free tier or expired user; proceed to subscribe
+    subscribeToPlan(plan.id);
+  };
+
+  const handleConfirmPlanPurchase = async () => {
+    if (!planToConfirm) return;
+    const selected = planToConfirm;
+    setPlanToConfirm(null);
+    await subscribeToPlan(selected.id, { allowExtension: true });
+  };
+
   const PasswordField = ({ 
     label, 
     value, 
@@ -223,12 +270,12 @@ export default function DashboardPage() {
           </Button>
         </header>
 
-        {/* 4 KPI Overview Cards (Subscription, Expiry, Quota, History) */}
-        <section className="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {/* 5 KPI Overview Cards (Subscription, Expiry, Quota, Resume Credits, Quick Action) */}
+        <section className="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
           {/* Card 1: Current Plan & Price */}
           <div className="rounded-2xl border border-orange-200/80 bg-white dark:bg-zinc-900 p-5 shadow-xs transition hover:shadow-md dark:border-zinc-800">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Current Plan</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">E-Card Plan</span>
               <div className="p-2 rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-950/40 dark:text-orange-400">
                 <CreditCard className="h-4 w-4" />
               </div>
@@ -297,7 +344,29 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Card 4: Quick Action */}
+          {/* Card 4: Resume Download Credits */}
+          <div className="rounded-2xl border border-zinc-200/80 bg-white dark:bg-zinc-900 p-5 shadow-xs transition hover:shadow-md dark:border-zinc-800">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Resume Credits</span>
+              <div className="p-2 rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400">
+                <FileText className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="text-xl font-bold text-zinc-900 dark:text-white">
+              {resumeCredits} {resumeCredits === 1 ? 'Credit' : 'Credits'}
+            </p>
+            <div className="mt-2 flex items-center justify-between text-xs text-zinc-500">
+              <span className="truncate">{resumeCredits > 0 ? 'Ready to download' : 'Pay-per-download'}</span>
+              <button
+                onClick={() => router.push('/resume-builder')}
+                className="text-orange-600 dark:text-orange-400 font-bold hover:underline shrink-0 ml-1 cursor-pointer"
+              >
+                Builder &rarr;
+              </button>
+            </div>
+          </div>
+
+          {/* Card 5: Quick Action */}
           <div className="rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500 to-amber-600 p-5 text-white shadow-lg shadow-orange-500/20 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -517,6 +586,24 @@ export default function DashboardPage() {
                 </p>
               </div>
 
+              {hasActiveSubscription && (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 dark:bg-amber-500/5 dark:border-amber-500/20 flex items-start gap-3">
+                  <ShieldCheck className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="text-xs text-zinc-700 dark:text-zinc-300">
+                    <p className="font-bold text-amber-800 dark:text-amber-300">
+                      Active Subscription Protection Enabled
+                    </p>
+                    <p className="mt-0.5 text-zinc-600 dark:text-zinc-400">
+                      You already have an active <span className="font-semibold text-zinc-900 dark:text-white">{planDisplayName}</span> subscription valid until{' '}
+                      <span className="font-semibold text-zinc-900 dark:text-white">
+                        {subscription?.expiryDate ? new Date(subscription.expiryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'expiry'}
+                      </span>.
+                      Duplicate payment for your active plan is blocked to protect against accidental double charges.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {plans.map((plan) => {
                   const isCurrent = subscription?.planId === plan.id && hasActiveSubscription;
@@ -531,7 +618,7 @@ export default function DashboardPage() {
                       className={cn(
                         'p-5 rounded-3xl border transition-all flex flex-col justify-between relative bg-white dark:bg-zinc-900',
                         isCurrent
-                          ? 'border-orange-500 shadow-lg shadow-orange-500/10 ring-2 ring-orange-500/20'
+                          ? 'border-emerald-500 shadow-lg shadow-emerald-500/10 ring-2 ring-emerald-500/20'
                           : 'border-zinc-200/80 dark:border-zinc-800 hover:border-orange-300 dark:hover:border-zinc-700 hover:shadow-md'
                       )}
                     >
@@ -554,8 +641,8 @@ export default function DashboardPage() {
                           </div>
 
                           {isCurrent && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300">
-                              Current Plan
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> Current Active
                             </span>
                           )}
                         </div>
@@ -595,23 +682,33 @@ export default function DashboardPage() {
                       {/* Subscribe Button */}
                       <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
                         <Button
-                          onClick={() => subscribeToPlan(plan.id)}
-                          disabled={isCheckingPayment}
+                          onClick={() => handlePlanClick(plan)}
+                          disabled={isCheckingPayment || isCurrent}
                           className={cn(
-                            'w-full rounded-xl font-bold text-xs h-10 shadow-xs cursor-pointer transition',
+                            'w-full rounded-xl font-bold text-xs h-10 shadow-xs transition',
                             isCurrent
-                              ? 'bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-800 dark:hover:bg-zinc-700'
-                              : 'bg-orange-600 hover:bg-orange-700 text-white shadow-orange-500/20'
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 cursor-not-allowed opacity-90'
+                              : 'bg-orange-600 hover:bg-orange-700 text-white shadow-orange-500/20 cursor-pointer'
                           )}
                         >
                           {isCheckingPayment ? (
                             <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
                           ) : isCurrent ? (
-                            'Extend Current Plan'
+                            <span className="flex items-center justify-center gap-1.5">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                              Active Plan &middot; No Payment Needed
+                            </span>
+                          ) : hasActiveSubscription ? (
+                            `Switch to ${plan.name}`
                           ) : (
                             `Get ${plan.name}`
                           )}
                         </Button>
+                        {isCurrent && (
+                          <p className="text-[11px] text-center text-zinc-400 mt-2 font-medium">
+                            Protected against duplicate payment
+                          </p>
+                        )}
                       </div>
                     </div>
                   );
@@ -730,6 +827,65 @@ export default function DashboardPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Duplicate Payment / Plan Switch Confirmation Dialog */}
+        <Dialog open={!!planToConfirm} onOpenChange={(open) => !open && setPlanToConfirm(null)}>
+          <DialogContent className="sm:max-w-md rounded-3xl p-6 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+            <DialogHeader>
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <DialogTitle className="text-center text-lg font-bold">
+                Confirm Plan Switch
+              </DialogTitle>
+              <DialogDescription className="text-center text-xs text-zinc-600 dark:text-zinc-400 pt-1">
+                You currently have an active <span className="font-bold text-zinc-900 dark:text-white">{planDisplayName}</span> valid until{' '}
+                <span className="font-semibold text-zinc-900 dark:text-white">
+                  {subscription?.expiryDate ? new Date(subscription.expiryDate).toLocaleDateString('en-IN') : 'expiry'}
+                </span> ({daysRemaining} days remaining).
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="my-3 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 text-xs space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-500">New Plan:</span>
+                <span className="font-bold text-zinc-900 dark:text-white">{planToConfirm?.name}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-500">Amount to pay:</span>
+                <span className="font-black text-orange-600 dark:text-orange-400">₹{planToConfirm?.offerPriceRupees}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-500">New Duration:</span>
+                <span className="font-semibold text-zinc-800 dark:text-zinc-200">{planToConfirm?.durationMonths} Month(s)</span>
+              </div>
+              <p className="text-[11px] text-zinc-400 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                Proceeding will update your subscription to this new plan. Do you want to proceed to payment?
+              </p>
+            </div>
+
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-2 border-t-0 bg-transparent p-0">
+              <Button
+                variant="outline"
+                onClick={() => setPlanToConfirm(null)}
+                className="rounded-xl text-xs font-semibold cursor-pointer"
+              >
+                Cancel &middot; Keep Current
+              </Button>
+              <Button
+                onClick={handleConfirmPlanPurchase}
+                disabled={isCheckingPayment}
+                className="rounded-xl text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white cursor-pointer"
+              >
+                {isCheckingPayment ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                ) : (
+                  `Confirm & Pay ₹${planToConfirm?.offerPriceRupees}`
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </main>
   );
